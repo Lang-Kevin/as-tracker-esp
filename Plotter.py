@@ -116,12 +116,18 @@ if "y" not in st.session_state:
     st.session_state.y = []
 if "status" not in st.session_state:
     st.session_state.status = "🔄 Starte..."
+if "max_omega" not in st.session_state:
+    st.session_state.max_omega = 0.0
 
 # ---------------- UI PLACEHOLDERS ----------------
 st.set_page_config(page_title="Arm Tracker", layout="wide")
 st.title("🏐 Arm Speed Tracker")
 
 status_placeholder = st.empty()
+col_max, col_reset = st.columns([3, 1])
+max_placeholder = col_max.empty()
+if col_reset.button("Reset Max"):
+    st.session_state.max_omega = 0.0
 chart_placeholder = st.empty()
 
 # ---------------- DRAIN QUEUES (main thread only) ----------------
@@ -132,12 +138,15 @@ while not _g.data_q.empty():
     t, omega = _g.data_q.get()
     st.session_state.x.append(t)
     st.session_state.y.append(omega)
+    if omega > st.session_state.max_omega:
+        st.session_state.max_omega = omega
 
 st.session_state.x = st.session_state.x[-MAX_POINTS:]
 st.session_state.y = st.session_state.y[-MAX_POINTS:]
 
 # ---------------- RENDER ----------------
 status_placeholder.text(st.session_state.status)
+max_placeholder.metric("Max Winkelgeschwindigkeit", f"{st.session_state.max_omega:.3f} rad/s")
 
 fig = go.Figure()
 fig.add_trace(go.Scatter(

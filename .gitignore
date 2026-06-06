@@ -1,1 +1,16 @@
-.claude
+# Claude Code internals
+.claude/
+.claudeignore
+
+# IDE
+.idea/
+
+# Android build artifacts
+code/app/build/
+code/**/build/
+*.apk
+*.aab
+*.ap_
+
+# Local config
+local.properties

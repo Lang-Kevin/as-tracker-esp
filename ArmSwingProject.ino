@@ -24,6 +24,10 @@ volatile bool prevDeviceConnected = false;
 float gyroBiasX = 0, gyroBiasY = 0, gyroBiasZ = 0;
 const int CALIB_SAMPLES = 500;
 
+// Mindest-Winkelgeschwindigkeit in rad/s – darunter wird kein Paket gesendet.
+// ~5.7°/s: eliminiert thermisches Rauschen und Kleinstbewegungen nach Kalibrierung.
+#define OMEGA_THRESHOLD 0.10f
+
 // ---------------- CALLBACKS ----------------
 class MyServerCallbacks : public BLEServerCallbacks {
 
@@ -146,6 +150,11 @@ void loop() {
   float gy = g.gyro.y - gyroBiasY;
   float gz = g.gyro.z - gyroBiasZ;
   float omega = sqrt(gx*gx + gy*gy + gz*gz);
+
+  if (omega < OMEGA_THRESHOLD) {
+    delay(20);
+    return;
+  }
 
   unsigned long t = millis();
 
