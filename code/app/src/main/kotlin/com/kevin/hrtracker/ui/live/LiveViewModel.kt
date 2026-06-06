@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kevin.armswing.ble.BleManager
 import com.kevin.armswing.ble.ConnectionState
 import com.kevin.armswing.data.repository.SessionRepository
+import com.kevin.armswing.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -14,7 +15,8 @@ import javax.inject.Inject
 @HiltViewModel
 class LiveViewModel @Inject constructor(
     private val bleManager: BleManager,
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
@@ -43,17 +45,22 @@ class LiveViewModel @Inject constructor(
     private val _sampleCount = MutableStateFlow(0)
     val sampleCount: StateFlow<Int> = _sampleCount.asStateFlow()
 
+    private val omegaThreshold: StateFlow<Float> = settingsRepository.omegaThreshold
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 1.0f)
+
     private var sessionStartMs = 0L
 
     init {
         viewModelScope.launch {
             bleManager.omegaReadings.collect { reading ->
                 _currentOmega.value = reading.omega
-                _omegaHistory.value = (_omegaHistory.value + reading.omega).takeLast(300)
-                _maxOmega.update { current ->
-                    if (current == null || reading.omega > current) reading.omega else current
+                if (reading.omega >= omegaThreshold.value) {
+                    _omegaHistory.value = (_omegaHistory.value + reading.omega).takeLast(300)
+                    _maxOmega.update { current ->
+                        if (current == null || reading.omega > current) reading.omega else current
+                    }
+                    _sampleCount.update { it + 1 }
                 }
-                _sampleCount.update { it + 1 }
             }
         }
         viewModelScope.launch {

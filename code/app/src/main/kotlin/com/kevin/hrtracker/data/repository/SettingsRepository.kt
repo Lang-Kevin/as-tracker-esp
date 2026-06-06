@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.kevin.armswing.domain.SavedDevice
 import kotlinx.coroutines.flow.Flow
@@ -18,9 +19,10 @@ class SettingsRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) {
     private object Keys {
-        val SAVED_DEVICE_MAC = stringPreferencesKey("saved_device_mac")
-        val SAVED_DEVICES    = stringPreferencesKey("saved_devices")
-        val AUTO_CONNECT     = booleanPreferencesKey("auto_connect")
+        val SAVED_DEVICE_MAC  = stringPreferencesKey("saved_device_mac")
+        val SAVED_DEVICES     = stringPreferencesKey("saved_devices")
+        val AUTO_CONNECT      = booleanPreferencesKey("auto_connect")
+        val OMEGA_THRESHOLD   = floatPreferencesKey("omega_threshold")
     }
 
     val savedDeviceAddress: Flow<String?> = dataStore.data.map { it[Keys.SAVED_DEVICE_MAC] }
@@ -63,5 +65,11 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setAutoConnect(enabled: Boolean) {
         dataStore.edit { it[Keys.AUTO_CONNECT] = enabled }
+    }
+
+    val omegaThreshold: Flow<Float> = dataStore.data.map { it[Keys.OMEGA_THRESHOLD] ?: 1.0f }
+
+    suspend fun setOmegaThreshold(threshold: Float) {
+        dataStore.edit { it[Keys.OMEGA_THRESHOLD] = threshold }
     }
 }

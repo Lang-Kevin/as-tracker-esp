@@ -21,9 +21,16 @@ class SettingsViewModel @Inject constructor(
     val autoConnect: StateFlow<Boolean> = settingsRepository.autoConnect
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val omegaThreshold: StateFlow<Float> = settingsRepository.omegaThreshold
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1.0f)
+
     fun clearSavedDevice() = viewModelScope.launch { settingsRepository.clearSavedDevice() }
 
     fun toggleAutoConnect() = viewModelScope.launch {
         settingsRepository.setAutoConnect(!autoConnect.value)
+    }
+
+    fun setOmegaThreshold(threshold: Float) = viewModelScope.launch {
+        settingsRepository.setOmegaThreshold(threshold)
     }
 }

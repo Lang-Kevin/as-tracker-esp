@@ -2,11 +2,16 @@ package com.kevin.armswing.ui.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -18,6 +23,10 @@ fun SettingsScreen(
 ) {
     val savedDeviceAddress by viewModel.savedDeviceAddress.collectAsStateWithLifecycle()
     val autoConnect by viewModel.autoConnect.collectAsStateWithLifecycle()
+    val omegaThreshold by viewModel.omegaThreshold.collectAsStateWithLifecycle()
+    var thresholdInput by remember(omegaThreshold) { mutableStateOf("%.2f".format(omegaThreshold)) }
+    val isThresholdValid = thresholdInput.toFloatOrNull()?.let { it > 0f } == true
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = Modifier
@@ -75,6 +84,53 @@ fun SettingsScreen(
                         checked = autoConnect,
                         onCheckedChange = { viewModel.toggleAutoConnect() }
                     )
+                }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Aufzeichnung", style = MaterialTheme.typography.titleMedium)
+                HorizontalDivider()
+                Text(
+                    "Samples unterhalb des Schwellenwerts werden nicht gespeichert oder angezeigt.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = thresholdInput,
+                        onValueChange = { thresholdInput = it },
+                        label = { Text("Schwellenwert") },
+                        suffix = { Text("rad/s") },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = {
+                            thresholdInput.toFloatOrNull()?.takeIf { it > 0f }
+                                ?.let { viewModel.setOmegaThreshold(it) }
+                            focusManager.clearFocus()
+                        }),
+                        isError = !isThresholdValid,
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = {
+                            thresholdInput.toFloatOrNull()?.takeIf { it > 0f }
+                                ?.let { viewModel.setOmegaThreshold(it) }
+                            focusManager.clearFocus()
+                        },
+                        enabled = isThresholdValid
+                    ) { Text("Speichern") }
                 }
             }
         }

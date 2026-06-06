@@ -12,21 +12,24 @@ Adafruit_MPU6050 mpu;
 // ---------------- BLE ----------------
 #define SERVICE_UUID        "12345678-1234-1234-1234-1234567890ab"
 #define CHARACTERISTIC_UUID "87654321-4321-4321-4321-0987654321ba"
+#define THRESHOLD_CHAR_UUID "12345678-1234-1234-1234-1234567890cd"
 
-BLEServer         *pServer         = nullptr;
-BLECharacteristic *pCharacteristic = nullptr;
+BLEServer         *pServer          = nullptr;
+BLECharacteristic *pCharacteristic  = nullptr;
+BLECharacteristic *pThresholdChar   = nullptr;
 
 // volatile: written from BLE-Stack FreeRTOS task, read from main loop
-volatile bool deviceConnected     = false;
-volatile bool prevDeviceConnected = false;
+volatile bool  deviceConnected     = false;
+volatile bool  prevDeviceConnected = false;
+volatile float receivedThreshold   = 1.0f;  // set by Android on connect
+volatile bool  thresholdReceived   = false;
 
 // ---------------- CALIB ----------------
 float gyroBiasX = 0, gyroBiasY = 0, gyroBiasZ = 0;
 const int CALIB_SAMPLES = 500;
 
-// Mindest-Winkelgeschwindigkeit in rad/s – darunter wird kein Paket gesendet.
-// ~5.7°/s: eliminiert thermisches Rauschen und Kleinstbewegungen nach Kalibrierung.
-#define OMEGA_THRESHOLD 0.10f
+// Firmware-Mindestschwelle (thermisches Rauschen); eigentlicher Schwellenwert
+// kommt per BLE-Write vom Android-Gerät beim Verbindungsaufbau (receivedThreshold).
 
 // ---------------- CALLBACKS ----------------
 class MyServerCallbacks : public BLEServerCallbacks {
@@ -41,6 +44,21 @@ class MyServerCallbacks : public BLEServerCallbacks {
     deviceConnected = false;
     Serial.println("[BLE] Client getrennt");
     // Advertising-Restart erfolgt in loop() nach Stack-Settle-Delay
+  }
+};
+
+// ---------------- THRESHOLD CALLBACK ----------------
+class MyThresholdCallbacks : public BLECharacteristicCallbacks {
+  void onWrite(BLECharacteristic* pChar) override {
+    if (pChar->getLength() == 4) {
+      float val;
+      memcpy(&val, pChar->getData(), 4);
+      if (val > 0.0f) {
+        receivedThreshold = val;
+        thresholdReceived = true;
+        Serial.printf("[BLE] Threshold empfangen: %.3f rad/s\n", val);
+      }
+    }
   }
 };
 
@@ -85,6 +103,13 @@ void setupBLE() {
     BLECharacteristic::PROPERTY_NOTIFY
   );
   pCharacteristic->addDescriptor(new BLE2902());
+
+  pThresholdChar = pService->createCharacteristic(
+    THRESHOLD_CHAR_UUID,
+    BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NO_RESPONSE
+  );
+  pThresholdChar->setCallbacks(new MyThresholdCallbacks());
+
   pService->start();
 
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
@@ -127,6 +152,7 @@ void loop() {
   if (!deviceConnected && prevDeviceConnected) {
     // Verbindung gerade verloren: BLE-Stack Zeit zum Aufräumen geben
     delay(500);
+    thresholdReceived = false;
     pServer->startAdvertising();
     Serial.println("[BLE] Advertising neu gestartet – warte auf Reconnect");
     prevDeviceConnected = false;
@@ -142,6 +168,11 @@ void loop() {
     return;
   }
 
+  if (!thresholdReceived) {
+    delay(50);
+    return;
+  }
+
   // --- Sensor lesen ---
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
@@ -151,7 +182,7 @@ void loop() {
   float gz = g.gyro.z - gyroBiasZ;
   float omega = sqrt(gx*gx + gy*gy + gz*gz);
 
-  if (omega < OMEGA_THRESHOLD) {
+  if (omega < receivedThreshold) {
     delay(20);
     return;
   }

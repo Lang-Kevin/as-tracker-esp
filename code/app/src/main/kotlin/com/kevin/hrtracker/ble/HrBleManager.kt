@@ -7,6 +7,7 @@ import android.content.Context
 import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
+import com.kevin.armswing.data.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +20,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,13 +40,15 @@ sealed class ConnectionState {
 
 @Singleton
 class BleManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository
 ) {
     companion object {
         private const val TAG = "ArmSwing"
-        val MPU_SERVICE_UUID: UUID = UUID.fromString("12345678-1234-1234-1234-1234567890ab")
-        val MPU_CHAR_UUID: UUID = UUID.fromString("87654321-4321-4321-4321-0987654321ba")
-        val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
+        val MPU_SERVICE_UUID: UUID    = UUID.fromString("12345678-1234-1234-1234-1234567890ab")
+        val MPU_CHAR_UUID: UUID       = UUID.fromString("87654321-4321-4321-4321-0987654321ba")
+        val THRESHOLD_CHAR_UUID: UUID = UUID.fromString("12345678-1234-1234-1234-1234567890cd")
+        val CCCD_UUID: UUID           = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
         private val RECONNECT_DELAYS_MS = listOf(3_000L, 5_000L, 10_000L, 30_000L)
         const val FAKE_DEVICE_ADDRESS = "FA:CE:00:00:00:01"
         const val FAKE_DEVICE_NAME = "Pseudo-MPU6050 [Test]"
@@ -264,13 +270,18 @@ class BleManager @Inject constructor(
                 gatt.writeDescriptor(cccd)
             }
             Log.d(TAG, "CCCD written — MPU notifications enabled")
-            _connectionState.value = ConnectionState.Ready
         }
 
         override fun onDescriptorWrite(
             gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int
         ) {
             Log.d(TAG, "Descriptor write ${descriptor.uuid} status=$status")
+            if (status != BluetoothGatt.GATT_SUCCESS) return
+            scope.launch {
+                val threshold = settingsRepository.omegaThreshold.first()
+                writeThresholdToDevice(gatt, threshold)
+                _connectionState.value = ConnectionState.Ready
+            }
         }
 
         // API 33+
@@ -294,6 +305,23 @@ class BleManager @Inject constructor(
                 handleOmegaData(characteristic.value ?: return)
             }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun writeThresholdToDevice(gatt: BluetoothGatt, threshold: Float) {
+        val char = gatt.getService(MPU_SERVICE_UUID)
+            ?.getCharacteristic(THRESHOLD_CHAR_UUID)
+            ?: run { Log.e(TAG, "Threshold char not found"); return }
+        val bytes = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(threshold).array()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeCharacteristic(char, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+        } else {
+            @Suppress("DEPRECATION")
+            char.value = bytes
+            @Suppress("DEPRECATION")
+            gatt.writeCharacteristic(char)
+        }
+        Log.d(TAG, "Threshold $threshold rad/s → device")
     }
 
     private fun handleOmegaData(value: ByteArray) {
