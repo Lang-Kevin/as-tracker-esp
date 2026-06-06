@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "HRTracker"
+rootProject.name = "Armswing-Tracker"
 include(":app")
