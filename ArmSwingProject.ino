@@ -9,26 +9,26 @@
 
 Adafruit_MPU6050 mpu;
 
+// Uncomment to include gyroMagnitudeDeg in BLE payload for debugging
+// #define DEBUG_BLE
+
 // ---------------- BLE ----------------
 #define SERVICE_UUID        "12345678-1234-1234-1234-1234567890ab"
 #define CHARACTERISTIC_UUID "87654321-4321-4321-4321-0987654321ba"
-#define THRESHOLD_CHAR_UUID "12345678-1234-1234-1234-1234567890cd"
+#define CONFIG_CHAR_UUID    "12345678-1234-1234-1234-1234567890cd"
 
 BLEServer         *pServer          = nullptr;
 BLECharacteristic *pCharacteristic  = nullptr;
-BLECharacteristic *pThresholdChar   = nullptr;
+BLECharacteristic *pConfigChar      = nullptr;
 
 // volatile: written from BLE-Stack FreeRTOS task, read from main loop
 volatile bool  deviceConnected     = false;
 volatile bool  prevDeviceConnected = false;
-volatile float receivedThreshold   = 1.0f;  // default; updated via BLE write from Android
+volatile float receivedSensorRadius = 0.35f;  // meters; updated via BLE write from Android
 
 // ---------------- CALIB ----------------
 float gyroBiasX = 0, gyroBiasY = 0, gyroBiasZ = 0;
 const int CALIB_SAMPLES = 500;
-
-// Firmware-Mindestschwelle (thermisches Rauschen); eigentlicher Schwellenwert
-// kommt per BLE-Write vom Android-Gerät beim Verbindungsaufbau (receivedThreshold).
 
 // ---------------- CALLBACKS ----------------
 class MyServerCallbacks : public BLEServerCallbacks {
@@ -46,15 +46,15 @@ class MyServerCallbacks : public BLEServerCallbacks {
   }
 };
 
-// ---------------- THRESHOLD CALLBACK ----------------
-class MyThresholdCallbacks : public BLECharacteristicCallbacks {
+// ---------------- CONFIG CALLBACK ----------------
+class MyConfigCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* pChar) override {
     if (pChar->getLength() == 4) {
       float val;
       memcpy(&val, pChar->getData(), 4);
       if (val > 0.0f) {
-        receivedThreshold = val;
-        Serial.printf("[BLE] Threshold empfangen: %.3f rad/s\n", val);
+        receivedSensorRadius = val;
+        Serial.printf("[BLE] sensorRadius empfangen: %.4f m\n", val);
       }
     }
   }
@@ -102,11 +102,11 @@ void setupBLE() {
   );
   pCharacteristic->addDescriptor(new BLE2902());
 
-  pThresholdChar = pService->createCharacteristic(
-    THRESHOLD_CHAR_UUID,
+  pConfigChar = pService->createCharacteristic(
+    CONFIG_CHAR_UUID,
     BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR
   );
-  pThresholdChar->setCallbacks(new MyThresholdCallbacks());
+  pConfigChar->setCallbacks(new MyConfigCallbacks());
 
   pService->start();
 
@@ -172,25 +172,26 @@ void loop() {
   float gx = g.gyro.x - gyroBiasX;
   float gy = g.gyro.y - gyroBiasY;
   float gz = g.gyro.z - gyroBiasZ;
-  float omega = sqrt(gx*gx + gy*gy + gz*gz);
 
-  if (omega < receivedThreshold) {
-    delay(20);
-    return;
-  }
-
-  unsigned long t = millis();
+  float gyroMagnitudeRad = sqrt(gx*gx + gy*gy + gz*gz);  // rad/s (Adafruit library)
+  float velocityMps = gyroMagnitudeRad * receivedSensorRadius;
 
   // char-Buffer statt String-Klasse: kein Heap-Overhead
   char buf[32];
-  snprintf(buf, sizeof(buf), "%lu,%.4f", t, omega);
+#ifdef DEBUG_BLE
+  float gyroMagnitudeDeg = gyroMagnitudeRad * 180.0f / PI;
+  snprintf(buf, sizeof(buf), "%.4f,%.4f", velocityMps, gyroMagnitudeDeg);
+#else
+  snprintf(buf, sizeof(buf), "%.4f", velocityMps);
+#endif
 
   pCharacteristic->setValue(buf);
   pCharacteristic->notify();
 
   packetCount++;
   if (packetCount % 250 == 0) {
-    Serial.printf("[DATA] %lu Pakete – t=%lums omega=%.3f rad/s\n", packetCount, t, omega);
+    Serial.printf("[DATA] %lu Pakete – vel=%.4f m/s  radius=%.3f m\n",
+                  packetCount, velocityMps, receivedSensorRadius);
   }
 
   delay(20);
