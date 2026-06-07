@@ -21,8 +21,7 @@ BLECharacteristic *pThresholdChar   = nullptr;
 // volatile: written from BLE-Stack FreeRTOS task, read from main loop
 volatile bool  deviceConnected     = false;
 volatile bool  prevDeviceConnected = false;
-volatile float receivedThreshold   = 1.0f;  // set by Android on connect
-volatile bool  thresholdReceived   = false;
+volatile float receivedThreshold   = 1.0f;  // default; updated via BLE write from Android
 
 // ---------------- CALIB ----------------
 float gyroBiasX = 0, gyroBiasY = 0, gyroBiasZ = 0;
@@ -55,7 +54,6 @@ class MyThresholdCallbacks : public BLECharacteristicCallbacks {
       memcpy(&val, pChar->getData(), 4);
       if (val > 0.0f) {
         receivedThreshold = val;
-        thresholdReceived = true;
         Serial.printf("[BLE] Threshold empfangen: %.3f rad/s\n", val);
       }
     }
@@ -106,7 +104,7 @@ void setupBLE() {
 
   pThresholdChar = pService->createCharacteristic(
     THRESHOLD_CHAR_UUID,
-    BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NO_RESPONSE
+    BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR
   );
   pThresholdChar->setCallbacks(new MyThresholdCallbacks());
 
@@ -152,7 +150,6 @@ void loop() {
   if (!deviceConnected && prevDeviceConnected) {
     // Verbindung gerade verloren: BLE-Stack Zeit zum Aufräumen geben
     delay(500);
-    thresholdReceived = false;
     pServer->startAdvertising();
     Serial.println("[BLE] Advertising neu gestartet – warte auf Reconnect");
     prevDeviceConnected = false;
@@ -164,11 +161,6 @@ void loop() {
   }
 
   if (!deviceConnected) {
-    delay(50);
-    return;
-  }
-
-  if (!thresholdReceived) {
     delay(50);
     return;
   }

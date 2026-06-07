@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
@@ -56,6 +57,19 @@ class BleManager @Inject constructor(
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    init {
+        // Push threshold changes to device immediately when already connected.
+        // drop(1) skips the initial emission — the connect handshake already sends it.
+        scope.launch {
+            settingsRepository.omegaThreshold.drop(1).collect { threshold ->
+                val gatt = bluetoothGatt ?: return@collect
+                if (_connectionState.value is ConnectionState.Ready) {
+                    writeThresholdToDevice(gatt, threshold)
+                }
+            }
+        }
+    }
 
     private val _scanResults = MutableStateFlow<List<ScanResult>>(emptyList())
     val scanResults: StateFlow<List<ScanResult>> = _scanResults.asStateFlow()
@@ -140,7 +154,6 @@ class BleManager @Inject constructor(
 
     private fun startFakeEmission() {
         fakeJob = scope.launch {
-            // Sine wave: amplitude 3 rad/s, period 2s, 100ms intervals (~10 Hz)
             var t = 0
             val startMs = System.currentTimeMillis()
             while (isFakeActive) {
@@ -255,7 +268,6 @@ class BleManager @Inject constructor(
                 return
             }
             gatt.setCharacteristicNotification(mpuChar, true)
-
             val cccd = mpuChar.getDescriptor(CCCD_UUID)
             if (cccd == null) {
                 Log.e(TAG, "CCCD descriptor (0x2902) not found")
@@ -281,6 +293,18 @@ class BleManager @Inject constructor(
                 val threshold = settingsRepository.omegaThreshold.first()
                 writeThresholdToDevice(gatt, threshold)
                 _connectionState.value = ConnectionState.Ready
+            }
+        }
+
+        override fun onCharacteristicWrite(
+            gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int
+        ) {
+            if (characteristic.uuid == THRESHOLD_CHAR_UUID) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    Log.d(TAG, "Threshold write confirmed by device")
+                } else {
+                    Log.e(TAG, "Threshold write FAILED: status=$status")
+                }
             }
         }
 
