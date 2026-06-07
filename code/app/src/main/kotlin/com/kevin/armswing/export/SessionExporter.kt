@@ -23,8 +23,8 @@ class SessionExporter @Inject constructor(private val db: ArmSwingDatabase) {
     suspend fun buildShareIntent(context: Context, sessionId: Long): Intent? =
         withContext(Dispatchers.IO) {
             val session = db.sessionDao().getById(sessionId) ?: return@withContext null
-            val samples = db.omegaSampleDao().getSamplesOnce(sessionId)
-            val omegas = samples.map { it.omega }
+            val samples = db.velocitySampleDao().getSamplesOnce(sessionId)
+            val omegas = samples.map { it.velocityMps }
             val durationS = session.endedAt?.let { (it - session.startedAt) / 1000 } ?: 0L
 
             val root = buildJsonObject {

@@ -17,11 +17,13 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): ArmSwingDatabase =
-        Room.databaseBuilder(context, ArmSwingDatabase::class.java, "arm_swing.db").build()
+        Room.databaseBuilder(context, ArmSwingDatabase::class.java, "arm_swing.db")
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides
     fun provideSessionDao(db: ArmSwingDatabase) = db.sessionDao()
 
     @Provides
-    fun provideOmegaSampleDao(db: ArmSwingDatabase) = db.omegaSampleDao()
+    fun provideVelocitySampleDao(db: ArmSwingDatabase) = db.velocitySampleDao()
 }

@@ -6,6 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
+    tableName = "velocity_samples",
     foreignKeys = [ForeignKey(
         entity = Session::class,
         parentColumns = ["id"],
@@ -14,9 +15,9 @@ import androidx.room.PrimaryKey
     )],
     indices = [Index("sessionId")]
 )
-data class OmegaSample(
+data class VelocitySample(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val sessionId: Long,
     val timestampMs: Long,
-    val omega: Float
+    val velocityMps: Float
 )

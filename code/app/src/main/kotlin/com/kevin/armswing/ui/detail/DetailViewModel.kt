@@ -25,9 +25,9 @@ class DetailViewModel @Inject constructor(
     val session: StateFlow<Session?> = db.sessionDao().getByIdFlow(sessionId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val omegaHistory: StateFlow<List<Float>> = db.omegaSampleDao()
+    val omegaHistory: StateFlow<List<Float>> = db.velocitySampleDao()
         .getSamplesForSession(sessionId)
-        .map { list -> list.map { it.omega } }
+        .map { list -> list.map { it.velocityMps } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     data class Stats(val avgOmega: Float, val maxOmega: Float, val sampleCount: Int)

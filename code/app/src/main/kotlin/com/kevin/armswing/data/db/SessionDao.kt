@@ -12,6 +12,9 @@ interface SessionDao {
     @Query("UPDATE Session SET endedAt = :endedAt WHERE id = :id")
     suspend fun closeSession(id: Long, endedAt: Long)
 
+    @Query("UPDATE Session SET peakMps = :peakMps, avgMps = :avgMps, sampleCount = :sampleCount WHERE id = :id")
+    suspend fun updateStats(id: Long, peakMps: Float, avgMps: Float, sampleCount: Int)
+
     @Query("SELECT * FROM Session ORDER BY startedAt DESC")
     fun getAllSessions(): Flow<List<Session>>
 
@@ -21,7 +24,6 @@ interface SessionDao {
     @Query("SELECT * FROM Session WHERE id = :id")
     fun getByIdFlow(id: Long): Flow<Session?>
 
-    // Closes sessions left open by a crash or app-kill (startedAt older than cutoff, endedAt null)
     @Query("UPDATE Session SET endedAt = :endedAt WHERE endedAt IS NULL AND startedAt < :cutoff")
     suspend fun closeOrphanedSessions(cutoff: Long, endedAt: Long)
 
