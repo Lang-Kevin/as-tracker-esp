@@ -19,6 +19,7 @@ import androidx.navigation.navArgument
 import com.kevin.armswing.service.ArmSwingRecordingService
 import com.kevin.armswing.ui.detail.DetailScreen
 import com.kevin.armswing.ui.history.HistoryScreen
+import com.kevin.armswing.ui.profile.ProfileScreen
 import com.kevin.armswing.ui.settings.SettingsScreen
 import com.kevin.armswing.ui.live.LiveScreen
 import com.kevin.armswing.ui.scan.ScanScreen
@@ -32,6 +33,7 @@ private object Route {
     const val HISTORY  = "history"
     const val DETAIL   = "detail/{sessionId}"
     const val SETTINGS = "settings"
+    const val PROFILE  = "profile"
     fun detail(id: Long) = "detail/$id"
 }
 
@@ -95,7 +97,14 @@ class MainActivity : ComponentActivity() {
             }
 
             composable(Route.SETTINGS) {
-                SettingsScreen(onBack = { navController.popBackStack() })
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToProfile = { navController.navigate(Route.PROFILE) }
+                )
+            }
+
+            composable(Route.PROFILE) {
+                ProfileScreen(onBack = { navController.popBackStack() })
             }
         }
     }

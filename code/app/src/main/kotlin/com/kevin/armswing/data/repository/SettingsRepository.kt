@@ -19,10 +19,11 @@ class SettingsRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) {
     private object Keys {
-        val SAVED_DEVICE_MAC  = stringPreferencesKey("saved_device_mac")
-        val SAVED_DEVICES     = stringPreferencesKey("saved_devices")
-        val AUTO_CONNECT      = booleanPreferencesKey("auto_connect")
-        val OMEGA_THRESHOLD   = floatPreferencesKey("omega_threshold")
+        val SAVED_DEVICE_MAC   = stringPreferencesKey("saved_device_mac")
+        val SAVED_DEVICES      = stringPreferencesKey("saved_devices")
+        val AUTO_CONNECT       = booleanPreferencesKey("auto_connect")
+        val SPINE_TO_SHOULDER  = floatPreferencesKey("spine_to_shoulder")
+        val SHOULDER_TO_ELBOW  = floatPreferencesKey("shoulder_to_elbow")
     }
 
     val savedDeviceAddress: Flow<String?> = dataStore.data.map { it[Keys.SAVED_DEVICE_MAC] }
@@ -67,9 +68,22 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[Keys.AUTO_CONNECT] = enabled }
     }
 
-    val omegaThreshold: Flow<Float> = dataStore.data.map { it[Keys.OMEGA_THRESHOLD] ?: 1.0f }
+    val spineToShoulder: Flow<Float> = dataStore.data.map { it[Keys.SPINE_TO_SHOULDER] ?: 20f }
 
-    suspend fun setOmegaThreshold(threshold: Float) {
-        dataStore.edit { it[Keys.OMEGA_THRESHOLD] = threshold }
+    suspend fun setSpineToShoulder(cm: Float) {
+        dataStore.edit { it[Keys.SPINE_TO_SHOULDER] = cm }
+    }
+
+    val shoulderToElbow: Flow<Float> = dataStore.data.map { it[Keys.SHOULDER_TO_ELBOW] ?: 30f }
+
+    suspend fun setShoulderToElbow(cm: Float) {
+        dataStore.edit { it[Keys.SHOULDER_TO_ELBOW] = cm }
+    }
+
+    // sensorRadius in meters: spine→shoulder + shoulder→elbow/2, converted from cm
+    val sensorRadius: Flow<Float> = dataStore.data.map { prefs ->
+        val spine = prefs[Keys.SPINE_TO_SHOULDER] ?: 20f
+        val elbow = prefs[Keys.SHOULDER_TO_ELBOW] ?: 30f
+        (spine + elbow / 2f) / 100f
     }
 }
