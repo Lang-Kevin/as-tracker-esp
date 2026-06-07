@@ -5,7 +5,6 @@ import android.bluetooth.*
 import android.bluetooth.le.*
 import android.content.Context
 import android.os.Build
-import android.os.ParcelUuid
 import android.util.Log
 import com.kevin.armswing.data.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,6 +28,7 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.sin
 
 sealed class ConnectionState {
@@ -46,10 +46,10 @@ class BleManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "ArmSwing"
-        val MPU_SERVICE_UUID: UUID    = UUID.fromString("12345678-1234-1234-1234-1234567890ab")
-        val MPU_CHAR_UUID: UUID       = UUID.fromString("87654321-4321-4321-4321-0987654321ba")
-        val THRESHOLD_CHAR_UUID: UUID = UUID.fromString("12345678-1234-1234-1234-1234567890cd")
-        val CCCD_UUID: UUID           = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
+        val MPU_SERVICE_UUID: UUID = UUID.fromString("12345678-1234-1234-1234-1234567890ab")
+        val MPU_CHAR_UUID: UUID    = UUID.fromString("87654321-4321-4321-4321-0987654321ba")
+        val CONFIG_CHAR_UUID: UUID = UUID.fromString("12345678-1234-1234-1234-1234567890cd")
+        val CCCD_UUID: UUID        = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
         private val RECONNECT_DELAYS_MS = listOf(3_000L, 5_000L, 10_000L, 30_000L)
         const val FAKE_DEVICE_ADDRESS = "FA:CE:00:00:00:01"
         const val FAKE_DEVICE_NAME = "Pseudo-MPU6050 [Test]"
@@ -59,13 +59,13 @@ class BleManager @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
-        // Push threshold changes to device immediately when already connected.
+        // Push sensorRadius changes to device immediately when already connected.
         // drop(1) skips the initial emission — the connect handshake already sends it.
         scope.launch {
-            settingsRepository.omegaThreshold.drop(1).collect { threshold ->
+            settingsRepository.sensorRadius.drop(1).collect { radius ->
                 val gatt = bluetoothGatt ?: return@collect
                 if (_connectionState.value is ConnectionState.Ready) {
-                    writeThresholdToDevice(gatt, threshold)
+                    writeSensorRadiusToDevice(gatt, radius)
                 }
             }
         }
@@ -77,8 +77,8 @@ class BleManager @Inject constructor(
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
-    private val _omegaReadings = MutableSharedFlow<OmegaReading>(replay = 0, extraBufferCapacity = 64)
-    val omegaReadings: SharedFlow<OmegaReading> = _omegaReadings.asSharedFlow()
+    private val _velocityReadings = MutableSharedFlow<VelocityReading>(replay = 0, extraBufferCapacity = 64)
+    val velocityReadings: SharedFlow<VelocityReading> = _velocityReadings.asSharedFlow()
 
     private var bluetoothGatt: BluetoothGatt? = null
     private var scanCallback: ScanCallback? = null
@@ -155,11 +155,9 @@ class BleManager @Inject constructor(
     private fun startFakeEmission() {
         fakeJob = scope.launch {
             var t = 0
-            val startMs = System.currentTimeMillis()
             while (isFakeActive) {
-                val omega = (3.0 * sin(t * 2 * PI / 20)).toFloat()
-                val tsMs = startMs + t * 100L
-                _omegaReadings.emit(OmegaReading(tsMs, omega))
+                val velocityMps = abs(3.0 * sin(t * 2 * PI / 20)).toFloat()
+                _velocityReadings.emit(VelocityReading(System.currentTimeMillis(), velocityMps))
                 delay(100L)
                 t++
             }
@@ -290,8 +288,8 @@ class BleManager @Inject constructor(
             Log.d(TAG, "Descriptor write ${descriptor.uuid} status=$status")
             if (status != BluetoothGatt.GATT_SUCCESS) return
             scope.launch {
-                val threshold = settingsRepository.omegaThreshold.first()
-                writeThresholdToDevice(gatt, threshold)
+                val radius = settingsRepository.sensorRadius.first()
+                writeSensorRadiusToDevice(gatt, radius)
                 _connectionState.value = ConnectionState.Ready
             }
         }
@@ -299,11 +297,11 @@ class BleManager @Inject constructor(
         override fun onCharacteristicWrite(
             gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int
         ) {
-            if (characteristic.uuid == THRESHOLD_CHAR_UUID) {
+            if (characteristic.uuid == CONFIG_CHAR_UUID) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
-                    Log.d(TAG, "Threshold write confirmed by device")
+                    Log.d(TAG, "SensorRadius write confirmed by device")
                 } else {
-                    Log.e(TAG, "Threshold write FAILED: status=$status")
+                    Log.e(TAG, "SensorRadius write FAILED: status=$status")
                 }
             }
         }
@@ -314,7 +312,7 @@ class BleManager @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
-            if (characteristic.uuid == MPU_CHAR_UUID) handleOmegaData(value)
+            if (characteristic.uuid == MPU_CHAR_UUID) handleVelocityData(value)
         }
 
         // API < 33
@@ -326,17 +324,17 @@ class BleManager @Inject constructor(
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
                 && characteristic.uuid == MPU_CHAR_UUID
             ) {
-                handleOmegaData(characteristic.value ?: return)
+                handleVelocityData(characteristic.value ?: return)
             }
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun writeThresholdToDevice(gatt: BluetoothGatt, threshold: Float) {
+    private fun writeSensorRadiusToDevice(gatt: BluetoothGatt, radius: Float) {
         val char = gatt.getService(MPU_SERVICE_UUID)
-            ?.getCharacteristic(THRESHOLD_CHAR_UUID)
-            ?: run { Log.e(TAG, "Threshold char not found"); return }
-        val bytes = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(threshold).array()
+            ?.getCharacteristic(CONFIG_CHAR_UUID)
+            ?: run { Log.e(TAG, "Config char not found"); return }
+        val bytes = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(radius).array()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             gatt.writeCharacteristic(char, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
         } else {
@@ -345,16 +343,13 @@ class BleManager @Inject constructor(
             @Suppress("DEPRECATION")
             gatt.writeCharacteristic(char)
         }
-        Log.d(TAG, "Threshold $threshold rad/s → device")
+        Log.d(TAG, "SensorRadius $radius m → device")
     }
 
-    private fun handleOmegaData(value: ByteArray) {
+    private fun handleVelocityData(value: ByteArray) {
         val raw = String(value, Charsets.UTF_8).trim()
-        val parts = raw.split(",")
-        if (parts.size < 2) return
-        val tsMs = parts[0].toLongOrNull() ?: return
-        val omega = parts[1].toFloatOrNull() ?: return
-        Log.d(TAG, "omega=$omega rad/s  ts=$tsMs")
-        scope.launch { _omegaReadings.emit(OmegaReading(tsMs, omega)) }
+        val velocityMps = raw.split(",")[0].toFloatOrNull() ?: return
+        Log.d(TAG, "velocity=$velocityMps m/s")
+        scope.launch { _velocityReadings.emit(VelocityReading(System.currentTimeMillis(), velocityMps)) }
     }
 }

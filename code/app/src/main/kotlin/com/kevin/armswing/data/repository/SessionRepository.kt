@@ -26,10 +26,8 @@ class SessionRepository @Inject constructor(
     }
 
     private var sampleJob: Job? = null
-    @Volatile private var currentThreshold = 1.0f
 
     init {
-        scope.launch { settingsRepository.omegaThreshold.collect { currentThreshold = it } }
         scope.launch {
             db.sessionDao().closeOrphanedSessions(
                 cutoff = System.currentTimeMillis(),
@@ -45,13 +43,11 @@ class SessionRepository @Inject constructor(
         )
         _activeSessionId.value = id
         sampleJob = scope.launch {
-            bleManager.omegaReadings.collect { reading ->
-                if (reading.omega >= currentThreshold) {
-                    db.omegaSampleDao().insert(
-                        OmegaSample(sessionId = id, timestampMs = reading.timestampMs, omega = reading.omega)
-                    )
-                    Log.d("ArmSwing", "DB: omega=${reading.omega} → session $id")
-                }
+            bleManager.velocityReadings.collect { reading ->
+                db.omegaSampleDao().insert(
+                    OmegaSample(sessionId = id, timestampMs = reading.timestampMs, omega = reading.velocityMps)
+                )
+                Log.d("ArmSwing", "DB: velocity=${reading.velocityMps} m/s → session $id")
             }
         }
         Log.d("ArmSwing", "Session $id started: $label")
