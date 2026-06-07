@@ -24,16 +24,20 @@ class LiveViewModel @Inject constructor(
         .map { it?.label }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    private val _currentOmega = MutableStateFlow<Float?>(null)
-    val currentOmega: StateFlow<Float?> = _currentOmega.asStateFlow()
+    private val _currentVelocityMs = MutableStateFlow<Float?>(null)
+    val currentVelocityMs: StateFlow<Float?> = _currentVelocityMs.asStateFlow()
 
-    private val _omegaHistory = MutableStateFlow<List<Float>>(emptyList())
-    val omegaHistory: StateFlow<List<Float>> = _omegaHistory.asStateFlow()
+    val currentVelocityKmh: StateFlow<Float?> = _currentVelocityMs
+        .map { it?.times(3.6f) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    private val _maxOmega = MutableStateFlow<Float?>(null)
-    val maxOmega: StateFlow<Float?> = _maxOmega.asStateFlow()
+    private val _velocityHistory = MutableStateFlow<List<Float>>(emptyList())
+    val velocityHistory: StateFlow<List<Float>> = _velocityHistory.asStateFlow()
 
-    val avgOmega: StateFlow<Float?> = _omegaHistory.map { history ->
+    private val _sessionPeakMs = MutableStateFlow<Float?>(null)
+    val sessionPeakMs: StateFlow<Float?> = _sessionPeakMs.asStateFlow()
+
+    val avgVelocityMs: StateFlow<Float?> = _velocityHistory.map { history ->
         if (history.isEmpty()) null else history.average().toFloat()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -49,9 +53,9 @@ class LiveViewModel @Inject constructor(
         viewModelScope.launch {
             bleManager.velocityReadings.collect { reading ->
                 val v = reading.velocityMps
-                _currentOmega.value = v
-                _omegaHistory.value = (_omegaHistory.value + v).takeLast(300)
-                _maxOmega.update { current ->
+                _currentVelocityMs.value = v
+                _velocityHistory.value = (_velocityHistory.value + v).takeLast(300)
+                _sessionPeakMs.update { current ->
                     if (current == null || v > current) v else current
                 }
                 _sampleCount.update { it + 1 }
@@ -71,9 +75,9 @@ class LiveViewModel @Inject constructor(
                 if (id == null) {
                     sessionStartMs = 0L
                     _elapsedSeconds.value = 0
-                    _currentOmega.value = null
-                    _omegaHistory.value = emptyList()
-                    _maxOmega.value = null
+                    _currentVelocityMs.value = null
+                    _velocityHistory.value = emptyList()
+                    _sessionPeakMs.value = null
                     _sampleCount.value = 0
                 }
             }

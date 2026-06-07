@@ -100,7 +100,7 @@ fun OmegaSessionChart(
             textAlign = android.graphics.Paint.Align.RIGHT
         }
         drawContext.canvas.nativeCanvas.drawText(
-            "%.2f rad/s".format(lastVal),
+            "%.2f m/s".format(lastVal),
             size.width - with(density) { 2.dp.toPx() },
             lastY - with(density) { 8.dp.toPx() },
             valuePaint

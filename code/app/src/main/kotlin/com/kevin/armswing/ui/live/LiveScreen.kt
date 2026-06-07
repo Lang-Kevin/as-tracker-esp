@@ -24,10 +24,11 @@ fun LiveScreen(
     onAbortSession: () -> Unit = onStopSession,
     viewModel: LiveViewModel = hiltViewModel()
 ) {
-    val currentOmega by viewModel.currentOmega.collectAsStateWithLifecycle()
-    val omegaHistory by viewModel.omegaHistory.collectAsStateWithLifecycle()
-    val maxOmega by viewModel.maxOmega.collectAsStateWithLifecycle()
-    val avgOmega by viewModel.avgOmega.collectAsStateWithLifecycle()
+    val currentVelocityMs by viewModel.currentVelocityMs.collectAsStateWithLifecycle()
+    val currentVelocityKmh by viewModel.currentVelocityKmh.collectAsStateWithLifecycle()
+    val velocityHistory by viewModel.velocityHistory.collectAsStateWithLifecycle()
+    val sessionPeakMs by viewModel.sessionPeakMs.collectAsStateWithLifecycle()
+    val avgVelocityMs by viewModel.avgVelocityMs.collectAsStateWithLifecycle()
     val elapsed by viewModel.elapsedSeconds.collectAsStateWithLifecycle()
     val sampleCount by viewModel.sampleCount.collectAsStateWithLifecycle()
     val sessionLabel by viewModel.sessionLabel.collectAsStateWithLifecycle()
@@ -94,8 +95,8 @@ fun LiveScreen(
         Spacer(Modifier.height(8.dp))
 
         OmegaSessionChart(
-            omegaHistory = omegaHistory,
-            currentOmega = currentOmega,
+            omegaHistory = velocityHistory,
+            currentOmega = currentVelocityMs,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -103,21 +104,32 @@ fun LiveScreen(
 
         Spacer(Modifier.height(12.dp))
 
+        // Prominent km/h display
+        currentVelocityKmh?.let { kmh ->
+            Text(
+                text = "%.1f km/h".format(kmh),
+                style = MaterialTheme.typography.displayMedium,
+                color = Color.White,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+            Spacer(Modifier.height(4.dp))
+        }
+
         Row(modifier = Modifier.fillMaxWidth()) {
             StatItem(
                 "AKTUELL",
-                currentOmega?.let { "%.2f".format(it) } ?: "—",
+                currentVelocityMs?.let { "%.2f m/s".format(it) } ?: "—",
                 Modifier.weight(1f)
             )
             StatItem(
-                "MAX",
-                maxOmega?.let { "%.2f".format(it) } ?: "—",
+                "PEAK",
+                sessionPeakMs?.let { "%.2f m/s".format(it) } ?: "—",
                 Modifier.weight(1f),
                 valueColor = PrimaryPurple
             )
             StatItem(
                 "Ø",
-                avgOmega?.let { "%.2f".format(it) } ?: "—",
+                avgVelocityMs?.let { "%.2f m/s".format(it) } ?: "—",
                 Modifier.weight(1f)
             )
         }
