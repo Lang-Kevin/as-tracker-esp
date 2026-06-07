@@ -24,7 +24,6 @@ class SessionExporter @Inject constructor(private val db: ArmSwingDatabase) {
         withContext(Dispatchers.IO) {
             val session = db.sessionDao().getById(sessionId) ?: return@withContext null
             val samples = db.velocitySampleDao().getSamplesOnce(sessionId)
-            val omegas = samples.map { it.velocityMps }
             val durationS = session.endedAt?.let { (it - session.startedAt) / 1000 } ?: 0L
 
             val root = buildJsonObject {
@@ -36,16 +35,16 @@ class SessionExporter @Inject constructor(private val db: ArmSwingDatabase) {
                     put("duration_s", durationS)
                 }
                 putJsonObject("summary") {
-                    put("max_omega", omegas.maxOrNull() ?: 0f)
-                    put("avg_omega", if (omegas.isEmpty()) 0f else omegas.average().toFloat())
-                    put("sample_count", samples.size)
+                    put("peak_mps", session.peakMps)
+                    put("avg_mps", session.avgMps)
+                    put("sample_count", session.sampleCount)
                 }
                 putJsonArray("samples") {
                     samples.forEach { s ->
                         addJsonObject {
                             put("device_ts_ms", s.timestampMs)
                             put("elapsed_s", (s.timestampMs - session.startedAt).toDouble() / 1000.0)
-                            put("omega", s.omega)
+                            put("velocity_mps", s.velocityMps)
                         }
                     }
                 }

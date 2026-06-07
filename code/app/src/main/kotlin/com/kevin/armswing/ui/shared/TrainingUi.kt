@@ -24,26 +24,26 @@ import com.kevin.armswing.ui.theme.LightPurple
 
 @Composable
 fun OmegaSessionChart(
-    omegaHistory: List<Float>,
-    currentOmega: Float?,
+    velocityHistory: List<Float>,
+    currentVelocityMs: Float?,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
 
     Canvas(modifier = modifier) {
-        if (omegaHistory.size < 2) return@Canvas
+        if (velocityHistory.size < 2) return@Canvas
 
         val leftPaddingPx = with(density) { 54.dp.toPx() }
         val chartWidth = size.width - leftPaddingPx
 
-        val dataMin = omegaHistory.min()
-        val dataMax = omegaHistory.max()
+        val dataMin = velocityHistory.min()
+        val dataMax = velocityHistory.max()
         val pad = ((dataMax - dataMin) * 0.1f).coerceAtLeast(0.5f)
         val yMin = dataMin - pad
         val yMax = dataMax + pad
         val yRange = (yMax - yMin).coerceAtLeast(0.01f)
 
-        fun omegaToY(v: Float): Float = size.height * (1f - (v - yMin) / yRange)
+        fun velocityToY(v: Float): Float = size.height * (1f - (v - yMin) / yRange)
 
         val labelPaint = android.graphics.Paint().apply {
             isAntiAlias = true
@@ -52,7 +52,7 @@ fun OmegaSessionChart(
         }
 
         listOf(yMin, (yMin + yMax) / 2f, yMax).forEach { tick ->
-            val y = omegaToY(tick)
+            val y = velocityToY(tick)
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
                 start = Offset(leftPaddingPx, y),
@@ -68,9 +68,9 @@ fun OmegaSessionChart(
         }
 
         val path = Path()
-        omegaHistory.forEachIndexed { index, v ->
-            val x = leftPaddingPx + (index.toFloat() / (omegaHistory.size - 1)) * chartWidth
-            val y = omegaToY(v.coerceIn(yMin, yMax))
+        velocityHistory.forEachIndexed { index, v ->
+            val x = leftPaddingPx + (index.toFloat() / (velocityHistory.size - 1)) * chartWidth
+            val y = velocityToY(v.coerceIn(yMin, yMax))
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         drawPath(
@@ -83,9 +83,9 @@ fun OmegaSessionChart(
             )
         )
 
-        val lastVal = currentOmega ?: omegaHistory.last()
+        val lastVal = currentVelocityMs ?: velocityHistory.last()
         val lastX = leftPaddingPx + chartWidth
-        val lastY = omegaToY(lastVal.coerceIn(yMin, yMax))
+        val lastY = velocityToY(lastVal.coerceIn(yMin, yMax))
 
         drawCircle(
             color = LightPurple,

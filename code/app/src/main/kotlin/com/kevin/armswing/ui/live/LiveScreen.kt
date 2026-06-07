@@ -95,8 +95,8 @@ fun LiveScreen(
         Spacer(Modifier.height(8.dp))
 
         OmegaSessionChart(
-            omegaHistory = velocityHistory,
-            currentOmega = currentVelocityMs,
+            velocityHistory = velocityHistory,
+            currentVelocityMs = currentVelocityMs,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)

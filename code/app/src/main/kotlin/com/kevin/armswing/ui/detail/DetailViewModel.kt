@@ -25,21 +25,10 @@ class DetailViewModel @Inject constructor(
     val session: StateFlow<Session?> = db.sessionDao().getByIdFlow(sessionId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val omegaHistory: StateFlow<List<Float>> = db.velocitySampleDao()
+    val velocityHistory: StateFlow<List<Float>> = db.velocitySampleDao()
         .getSamplesForSession(sessionId)
         .map { list -> list.map { it.velocityMps } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    data class Stats(val avgOmega: Float, val maxOmega: Float, val sampleCount: Int)
-
-    val stats: StateFlow<Stats?> = omegaHistory.map { list ->
-        if (list.isEmpty()) null
-        else Stats(
-            avgOmega = list.average().toFloat(),
-            maxOmega = list.max(),
-            sampleCount = list.size
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun updateLabel(label: String) {
         viewModelScope.launch { db.sessionDao().updateLabel(sessionId, label) }

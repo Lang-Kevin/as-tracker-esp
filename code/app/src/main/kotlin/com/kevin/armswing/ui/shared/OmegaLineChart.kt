@@ -12,15 +12,15 @@ import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 
 @Composable
 fun OmegaLineChart(
-    omegaHistory: List<Float>,
+    velocityHistory: List<Float>,
     modifier: Modifier = Modifier
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    LaunchedEffect(omegaHistory) {
-        if (omegaHistory.isNotEmpty()) {
+    LaunchedEffect(velocityHistory) {
+        if (velocityHistory.isNotEmpty()) {
             modelProducer.runTransaction {
-                lineSeries { series(omegaHistory) }
+                lineSeries { series(velocityHistory) }
             }
         }
     }

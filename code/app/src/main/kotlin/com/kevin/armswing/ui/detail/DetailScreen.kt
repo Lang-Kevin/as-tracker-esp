@@ -41,8 +41,7 @@ fun DetailScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val session by viewModel.session.collectAsStateWithLifecycle()
-    val omegaHistory by viewModel.omegaHistory.collectAsStateWithLifecycle()
-    val stats by viewModel.stats.collectAsStateWithLifecycle()
+    val velocityHistory by viewModel.velocityHistory.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
@@ -108,7 +107,7 @@ fun DetailScreen(
         Spacer(Modifier.height(8.dp))
 
         OmegaLineChart(
-            omegaHistory = omegaHistory,
+            velocityHistory = velocityHistory,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -118,8 +117,8 @@ fun DetailScreen(
 
         Row(modifier = Modifier.fillMaxWidth()) {
             StatItem(
-                "MAX rad/s",
-                stats?.maxOmega?.let { "%.2f".format(it) } ?: "—",
+                "PEAK m/s",
+                session?.peakMps?.let { "%.2f".format(it) } ?: "—",
                 Modifier.weight(1f),
                 valueColor = PrimaryPurple
             )
@@ -131,8 +130,8 @@ fun DetailScreen(
                 Modifier.weight(1f)
             )
             StatItem(
-                "Ø rad/s",
-                stats?.avgOmega?.let { "%.2f".format(it) } ?: "—",
+                "Ø m/s",
+                session?.avgMps?.let { "%.2f".format(it) } ?: "—",
                 Modifier.weight(1f)
             )
         }
@@ -140,7 +139,7 @@ fun DetailScreen(
         Spacer(Modifier.height(8.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
-            StatItem("SAMPLES", stats?.sampleCount?.toString() ?: "—", Modifier.weight(1f))
+            StatItem("SAMPLES", session?.sampleCount?.toString() ?: "—", Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(12.dp))
