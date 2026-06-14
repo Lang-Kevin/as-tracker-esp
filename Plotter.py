@@ -26,6 +26,7 @@ if _KEY not in sys.modules:
     _m.ble_started = threading.Event()
     _m.packet_count = 0
     _m.log_last: dict = {}
+    _m.start_time: float = 0.0
     sys.modules[_KEY] = _m
 
 _g = sys.modules[_KEY]
@@ -44,11 +45,17 @@ def log(msg: str):
 # ---------------- BLE CALLBACK ----------------
 def _notification_handler(_, data):
     try:
-        t, omega = data.decode().strip().split(",")
-        _g.data_q.put((float(t) / 1000.0, float(omega)))
+        parts = data.decode().strip().split(",")
+        velocity_mps = float(parts[0])
+        t = time.monotonic()
+        if _g.start_time == 0.0:
+            _g.start_time = t
+        elapsed = t - _g.start_time
+        _g.data_q.put((elapsed, velocity_mps))
         _g.packet_count += 1
         if _g.packet_count % 50 == 0:
-            log(f"[DATA] {_g.packet_count} Pakete empfangen – letztes: t={t}ms omega={float(omega):.3f} rad/s")
+            debug = f" gyro={float(parts[1]):.1f} deg/s" if len(parts) > 1 else ""
+            log(f"[DATA] {_g.packet_count} Pakete empfangen – letztes: vel={velocity_mps:.4f} m/s{debug}")
     except Exception as e:
         log(f"[DATA] Parse-Fehler: {e} – Rohdaten: {data!r}")
 
@@ -116,8 +123,8 @@ if "y" not in st.session_state:
     st.session_state.y = []
 if "status" not in st.session_state:
     st.session_state.status = "🔄 Starte..."
-if "max_omega" not in st.session_state:
-    st.session_state.max_omega = 0.0
+if "max_velocity" not in st.session_state:
+    st.session_state.max_velocity = 0.0
 
 # ---------------- UI PLACEHOLDERS ----------------
 st.set_page_config(page_title="Arm Tracker", layout="wide")
@@ -127,7 +134,7 @@ status_placeholder = st.empty()
 col_max, col_reset = st.columns([3, 1])
 max_placeholder = col_max.empty()
 if col_reset.button("Reset Max"):
-    st.session_state.max_omega = 0.0
+    st.session_state.max_velocity = 0.0
 chart_placeholder = st.empty()
 
 # ---------------- DRAIN QUEUES (main thread only) ----------------
@@ -135,29 +142,29 @@ while not _g.status_q.empty():
     st.session_state.status = _g.status_q.get()
 
 while not _g.data_q.empty():
-    t, omega = _g.data_q.get()
+    t, velocity = _g.data_q.get()
     st.session_state.x.append(t)
-    st.session_state.y.append(omega)
-    if omega > st.session_state.max_omega:
-        st.session_state.max_omega = omega
+    st.session_state.y.append(velocity)
+    if velocity > st.session_state.max_velocity:
+        st.session_state.max_velocity = velocity
 
 st.session_state.x = st.session_state.x[-MAX_POINTS:]
 st.session_state.y = st.session_state.y[-MAX_POINTS:]
 
 # ---------------- RENDER ----------------
 status_placeholder.text(st.session_state.status)
-max_placeholder.metric("Max Winkelgeschwindigkeit", f"{st.session_state.max_omega:.3f} rad/s")
+max_placeholder.metric("Max Geschwindigkeit", f"{st.session_state.max_velocity:.3f} m/s")
 
 fig = go.Figure()
 fig.add_trace(go.Scatter(
     x=st.session_state.x,
     y=st.session_state.y,
     mode="lines",
-    name="Omega (rad/s)"
+    name="Velocity (m/s)"
 ))
 fig.update_layout(
     xaxis_title="Zeit (s)",
-    yaxis_title="Winkelgeschwindigkeit (rad/s)",
+    yaxis_title="Geschwindigkeit (m/s)",
     margin=dict(l=40, r=40, t=40, b=40),
 )
 chart_placeholder.plotly_chart(fig, width="stretch")

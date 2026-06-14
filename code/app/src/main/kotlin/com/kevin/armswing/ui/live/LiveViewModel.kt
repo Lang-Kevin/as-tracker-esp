@@ -3,7 +3,7 @@ package com.kevin.armswing.ui.live
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kevin.armswing.ble.BleManager
-import com.kevin.armswing.ble.ConnectionState
+import com.kevin.shared.ble.ConnectionState
 import com.kevin.armswing.data.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -19,6 +19,7 @@ class LiveViewModel @Inject constructor(
 
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
     val activeSessionId: StateFlow<Long?> = sessionRepository.activeSessionId
+    val batteryLevel: StateFlow<Int?> = bleManager.batteryLevel
 
     val sessionLabel: StateFlow<String?> = sessionRepository.activeSession
         .map { it?.label }

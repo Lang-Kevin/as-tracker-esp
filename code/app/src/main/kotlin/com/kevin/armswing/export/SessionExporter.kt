@@ -55,6 +55,29 @@ class SessionExporter @Inject constructor(private val db: ArmSwingDatabase) {
             shareIntent(context, file)
         }
 
+    suspend fun buildCsvShareIntent(context: Context, sessionId: Long): Intent? =
+        withContext(Dispatchers.IO) {
+            val session = db.sessionDao().getById(sessionId) ?: return@withContext null
+            val samples = db.velocitySampleDao().getSamplesOnce(sessionId)
+
+            val csv = buildString {
+                appendLine("timestamp,elapsed_s,velocity_mps")
+                samples.forEach { s ->
+                    val elapsed = (s.timestampMs - session.startedAt).toDouble() / 1000.0
+                    appendLine("${ts(s.timestampMs)},$elapsed,${s.velocityMps}")
+                }
+            }
+
+            val dir = File(context.cacheDir, "exports").also { it.mkdirs() }
+            val file = File(dir, "session_$sessionId.csv").also { it.writeText(csv) }
+            val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+            Intent(Intent.ACTION_SEND).apply {
+                type = "text/csv"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        }
+
     private fun ts(epochMs: Long): String = formatter.format(Instant.ofEpochMilli(epochMs))
 
     private fun writeToCache(context: Context, sessionId: Long, json: String): File {

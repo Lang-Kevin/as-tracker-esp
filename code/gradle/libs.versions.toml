@@ -20,6 +20,7 @@ compose-bom                  = { group = "androidx.compose",            name = "
 compose-ui                   = { group = "androidx.compose.ui",         name = "ui" }
 compose-ui-tooling-preview   = { group = "androidx.compose.ui",         name = "ui-tooling-preview" }
 compose-ui-tooling           = { group = "androidx.compose.ui",         name = "ui-tooling" }
+compose-ui-text-google-fonts = { group = "androidx.compose.ui",         name = "ui-text-google-fonts" }
 compose-material3            = { group = "androidx.compose.material3",   name = "material3" }
 activity-compose             = { group = "androidx.activity",            name = "activity-compose",             version.ref = "activity-compose" }
 lifecycle-viewmodel-compose  = { group = "androidx.lifecycle",           name = "lifecycle-viewmodel-compose",  version.ref = "lifecycle" }

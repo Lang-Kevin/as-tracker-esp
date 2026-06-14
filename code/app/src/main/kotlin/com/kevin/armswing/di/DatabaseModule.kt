@@ -18,6 +18,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): ArmSwingDatabase =
         Room.databaseBuilder(context, ArmSwingDatabase::class.java, "arm_swing.db")
+            .addMigrations(ArmSwingDatabase.MIGRATION_2_3)
             .fallbackToDestructiveMigration()
             .build()
 

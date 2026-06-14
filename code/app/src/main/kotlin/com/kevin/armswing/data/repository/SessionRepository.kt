@@ -32,11 +32,10 @@ class SessionRepository @Inject constructor(
 
     init {
         scope.launch {
-            db.sessionDao().closeOrphanedSessions(
-                cutoff = System.currentTimeMillis(),
-                endedAt = System.currentTimeMillis()
-            )
-            Log.d("ArmSwing", "Orphaned sessions cleaned up")
+            val now = System.currentTimeMillis()
+            db.sessionDao().closeOrphanedSessions(cutoff = now, endedAt = now)
+            db.sessionDao().purgeTrashBefore(now - 30L * 24 * 60 * 60 * 1000L)
+            Log.d("ArmSwing", "Orphaned sessions cleaned up, old trash purged")
         }
     }
 
@@ -83,5 +82,10 @@ class SessionRepository @Inject constructor(
 
     fun getSessionsFlow() = db.sessionDao().getAllSessions()
 
-    suspend fun deleteSessionsByIds(ids: List<Long>) = db.sessionDao().deleteByIds(ids)
+    fun getTrashFlow() = db.sessionDao().getTrashFlow()
+
+    suspend fun deleteSessionsByIds(ids: List<Long>) =
+        db.sessionDao().softDeleteByIds(ids, System.currentTimeMillis())
+
+    suspend fun restoreSession(id: Long) = db.sessionDao().restoreSession(id)
 }

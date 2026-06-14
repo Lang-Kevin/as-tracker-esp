@@ -5,6 +5,7 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+includeBuild("../../../Android/shared-android-lib")
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {

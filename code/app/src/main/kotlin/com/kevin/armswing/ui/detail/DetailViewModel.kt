@@ -39,4 +39,6 @@ class DetailViewModel @Inject constructor(
     }
 
     suspend fun export(context: Context): Intent? = exporter.buildShareIntent(context, sessionId)
+
+    suspend fun exportCsv(context: Context): Intent? = exporter.buildCsvShareIntent(context, sessionId)
 }

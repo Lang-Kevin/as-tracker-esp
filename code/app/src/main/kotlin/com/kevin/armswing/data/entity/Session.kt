@@ -2,6 +2,7 @@ package com.kevin.armswing.data.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.kevin.shared.domain.SoftDeletable
 
 @Entity
 data class Session(
@@ -12,5 +13,6 @@ data class Session(
     val peakMps: Float = 0f,
     val avgMps: Float = 0f,
     val sampleCount: Int = 0,
-    val note: String? = null
-)
+    val note: String? = null,
+    override val deletedAt: Long? = null
+) : SoftDeletable

@@ -7,8 +7,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.armswing.ui.shared.OmegaSessionChart
@@ -32,6 +37,7 @@ fun LiveScreen(
     val elapsed by viewModel.elapsedSeconds.collectAsStateWithLifecycle()
     val sampleCount by viewModel.sampleCount.collectAsStateWithLifecycle()
     val sessionLabel by viewModel.sessionLabel.collectAsStateWithLifecycle()
+    val batteryLevel by viewModel.batteryLevel.collectAsStateWithLifecycle()
 
     var showAbortDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
@@ -79,6 +85,7 @@ fun LiveScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                batteryLevel?.let { BatteryChip(it) }
                 Box(
                     modifier = Modifier
                         .size(8.dp)
@@ -166,6 +173,56 @@ fun LiveScreen(
                 )
             ) { Text("Abschließen") }
         }
+    }
+}
+
+@Composable
+private fun BatteryChip(level: Int) {
+    val tint = when {
+        level >= 50 -> Color(0xFF4CAF50)
+        level >= 20 -> Color(0xFFFF9800)
+        else        -> Color(0xFFF44336)
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier.size(width = 18.dp, height = 10.dp)
+        ) {
+            val stroke = 1.2.dp.toPx()
+            val bodyW = size.width * 0.87f
+            val termH = size.height * 0.4f
+            val termY = (size.height - termH) / 2f
+            // Body outline
+            drawRoundRect(
+                color = tint,
+                size = Size(bodyW, size.height),
+                cornerRadius = CornerRadius(2.dp.toPx()),
+                style = Stroke(stroke)
+            )
+            // Terminal
+            drawRect(
+                color = tint,
+                topLeft = Offset(bodyW, termY),
+                size = Size(size.width - bodyW, termH)
+            )
+            // Fill bar
+            val fillW = ((bodyW - stroke * 4) * level / 100f).coerceAtLeast(0f)
+            if (fillW > 0f) {
+                drawRoundRect(
+                    color = tint,
+                    topLeft = Offset(stroke * 2, stroke * 2),
+                    size = Size(fillW, size.height - stroke * 4),
+                    cornerRadius = CornerRadius(1.dp.toPx())
+                )
+            }
+        }
+        Text(
+            text = "$level%",
+            color = tint,
+            fontSize = 11.sp
+        )
     }
 }
 

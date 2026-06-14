@@ -1,0 +1,13 @@
+1. Lies project.md
+2. Lies architecture.md
+3. Lies progress.md
+4. Prüfe git status
+5. Committe offene Änderungen
+6. Erstelle Plan
+7. Öffne nur Dateien, die für den Plan notwendig sind
+8. Arbeite Milestoneweise
+9. Nach jedem Milestone:
+   - Build
+   - Test
+   - Commit
+   - progress.md aktualisieren

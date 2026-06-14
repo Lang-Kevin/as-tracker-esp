@@ -193,7 +193,20 @@ fun DetailScreen(
                     containerColor = PrimaryPurple,
                     contentColor = OnPrimary
                 )
-            ) { Text("Exportieren") }
+            ) { Text("JSON") }
+            Button(
+                onClick = {
+                    scope.launch {
+                        val intent = viewModel.exportCsv(context) ?: return@launch
+                        context.startActivity(Intent.createChooser(intent, "Session exportieren"))
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryPurple,
+                    contentColor = OnPrimary
+                )
+            ) { Text("CSV") }
         }
     }
 }

@@ -19,6 +19,7 @@ private val ArmSwingColorScheme = darkColorScheme(
 fun ArmSwingTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = ArmSwingColorScheme,
+        typography = ArmSwingTypography,
         content = content
     )
 }

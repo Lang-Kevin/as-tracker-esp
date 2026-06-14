@@ -15,10 +15,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.kevin.armswing.ble.ConnectionState
-import com.kevin.armswing.ble.ConnectionState.Reconnecting
-import com.kevin.armswing.domain.DiscoveredDevice
-import com.kevin.armswing.domain.SavedDevice
+import com.kevin.shared.ble.ConnectionState
+import com.kevin.shared.ble.ConnectionState.Reconnecting
+import com.kevin.shared.domain.DiscoveredDevice
+import com.kevin.shared.domain.SavedDevice
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
