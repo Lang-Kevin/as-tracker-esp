@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.detail
+﻿package com.kevin.armswing.ui.detail
 
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import com.kevin.armswing.ui.shared.OmegaLineChart
@@ -118,7 +118,7 @@ fun DetailScreen(
         Row(modifier = Modifier.fillMaxWidth()) {
             StatItem(
                 "PEAK m/s",
-                session?.peakMps?.let { "%.2f".format(it) } ?: "—",
+                session?.peakMps?.let { "%.2f".format(it) } ?: "â€”",
                 Modifier.weight(1f),
                 valueColor = PrimaryPurple
             )
@@ -126,12 +126,12 @@ fun DetailScreen(
                 "DAUER",
                 session?.endedAt?.let { end ->
                     durationString((end - (session?.startedAt ?: end)) / 1000)
-                } ?: "—",
+                } ?: "â€”",
                 Modifier.weight(1f)
             )
             StatItem(
-                "Ø m/s",
-                session?.avgMps?.let { "%.2f".format(it) } ?: "—",
+                "Ã˜ m/s",
+                session?.avgMps?.let { "%.2f".format(it) } ?: "â€”",
                 Modifier.weight(1f)
             )
         }
@@ -139,7 +139,7 @@ fun DetailScreen(
         Spacer(Modifier.height(8.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
-            StatItem("SAMPLES", session?.sampleCount?.toString() ?: "—", Modifier.weight(1f))
+            StatItem("SAMPLES", session?.sampleCount?.toString() ?: "â€”", Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(12.dp))
@@ -159,13 +159,13 @@ fun DetailScreen(
                     color = Color.White.copy(alpha = 0.5f)
                 )
                 Text(
-                    text = if (noteText.isNullOrBlank()) "Notiz hinzufügen…" else noteText,
+                    text = if (noteText.isNullOrBlank()) "Notiz hinzufÃ¼genâ€¦" else noteText,
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (noteText.isNullOrBlank()) Color.White.copy(alpha = 0.35f) else Color.White
                 )
             }
             Text(
-                "✎",
+                "âœŽ",
                 style = MaterialTheme.typography.bodyMedium,
                 color = PrimaryPurple
             )
@@ -180,7 +180,7 @@ fun DetailScreen(
             OutlinedButton(
                 onClick = onBack,
                 modifier = Modifier.weight(1f)
-            ) { Text("← Zurück") }
+            ) { Text("â† ZurÃ¼ck") }
             Button(
                 onClick = {
                     scope.launch {
@@ -226,7 +226,7 @@ private fun EditNoteDialog(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("z.B. Beine sehr müde, neues PB…") },
+                placeholder = { Text("z.B. Beine sehr mÃ¼de, neues PBâ€¦") },
                 maxLines = 4
             )
         },
@@ -248,7 +248,7 @@ private fun EditTrainingTypeDialog(
     var selected by remember { mutableStateOf(current) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Trainingstyp ändern") },
+        title = { Text("Trainingstyp Ã¤ndern") },
         text = {
             Column {
                 TRAINING_TYPES.forEach { type ->

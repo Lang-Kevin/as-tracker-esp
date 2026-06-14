@@ -1,16 +1,20 @@
-package com.kevin.armswing.ui.live
+﻿package com.kevin.armswing.ui.live
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kevin.armswing.ble.BleManager
 import com.kevin.shared.ble.ConnectionState
 import com.kevin.armswing.data.repository.SessionRepository
+import com.kevin.shared.ui.chart.ChartScaleMode
+import com.kevin.shared.ui.chart.VelocityPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LiveViewModel @Inject constructor(
     private val bleManager: BleManager,
@@ -41,6 +45,19 @@ class LiveViewModel @Inject constructor(
     val avgVelocityMs: StateFlow<Float?> = _velocityHistory.map { history ->
         if (history.isEmpty()) null else history.average().toFloat()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private val _chartMode = MutableStateFlow(ChartScaleMode.SCROLL)
+    val chartMode: StateFlow<ChartScaleMode> = _chartMode.asStateFlow()
+
+    fun setChartMode(mode: ChartScaleMode) { _chartMode.value = mode }
+
+    val fullHistory: StateFlow<List<VelocityPoint>> = sessionRepository.activeSessionId
+        .flatMapLatest { id ->
+            if (id == null) flowOf(emptyList())
+            else sessionRepository.getSamplesForSession(id)
+                .map { samples -> samples.map { VelocityPoint(it.timestampMs, it.velocityMps) } }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _elapsedSeconds = MutableStateFlow(0L)
     val elapsedSeconds: StateFlow<Long> = _elapsedSeconds.asStateFlow()

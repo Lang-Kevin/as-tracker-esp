@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.profile
+﻿package com.kevin.armswing.ui.profile
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
@@ -42,7 +42,7 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("← Zurück") }
+            TextButton(onClick = onBack) { Text("â† ZurÃ¼ck") }
             Text("Spielerprofil", style = MaterialTheme.typography.headlineMedium)
         }
 
@@ -51,10 +51,10 @@ fun ProfileScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Körpermaße", style = MaterialTheme.typography.titleMedium)
+                Text("KÃ¶rpermaÃŸe", style = MaterialTheme.typography.titleMedium)
                 HorizontalDivider()
                 Text(
-                    "Der Sensor sitzt mittig auf dem Oberarm. Aus diesen Maßen wird der Hebelarm (sensorRadius) berechnet.",
+                    "Der Sensor sitzt mittig auf dem Oberarm. Aus diesen MaÃŸen wird der Hebelarm (sensorRadius) berechnet.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -62,7 +62,7 @@ fun ProfileScreen(
                 OutlinedTextField(
                     value = spineInput,
                     onValueChange = { spineInput = it },
-                    label = { Text("Wirbelsäule → Schulter") },
+                    label = { Text("WirbelsÃ¤ule â†’ Schulter") },
                     suffix = { Text("cm") },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Decimal,
@@ -76,7 +76,7 @@ fun ProfileScreen(
                 OutlinedTextField(
                     value = elbowInput,
                     onValueChange = { elbowInput = it },
-                    label = { Text("Schulter → Ellenbogen") },
+                    label = { Text("Schulter â†’ Ellenbogen") },
                     suffix = { Text("cm") },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Decimal,
@@ -110,7 +110,7 @@ fun ProfileScreen(
                     style = MaterialTheme.typography.displaySmall
                 )
                 Text(
-                    "= (Wirbelsäule→Schulter + Schulter→Ellenbogen / 2) / 100",
+                    "= (WirbelsÃ¤uleâ†’Schulter + Schulterâ†’Ellenbogen / 2) / 100",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

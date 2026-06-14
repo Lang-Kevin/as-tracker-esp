@@ -1,4 +1,4 @@
-package com.kevin.armswing.export
+﻿package com.kevin.armswing.export
 
 import android.content.Context
 import android.content.Intent
@@ -19,6 +19,7 @@ import javax.inject.Singleton
 class SessionExporter @Inject constructor(private val db: ArmSwingDatabase) {
 
     private val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault())
+    private val prettyJson = Json { prettyPrint = true }
 
     suspend fun buildShareIntent(context: Context, sessionId: Long): Intent? =
         withContext(Dispatchers.IO) {
@@ -50,7 +51,7 @@ class SessionExporter @Inject constructor(private val db: ArmSwingDatabase) {
                 }
             }
 
-            val json = Json { prettyPrint = true }.encodeToString(JsonObject.serializer(), root)
+            val json = prettyJson.encodeToString(JsonObject.serializer(), root)
             val file = writeToCache(context, sessionId, json)
             shareIntent(context, file)
         }

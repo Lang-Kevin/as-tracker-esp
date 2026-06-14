@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.scan
+﻿package com.kevin.armswing.ui.scan
 
 import android.Manifest
 import android.os.Build
@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -68,7 +68,7 @@ fun ScanScreen(
                 Text("Verlauf", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TextButton(onClick = onNavigateToSettings) {
-                Text("⚙", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("âš™", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -81,7 +81,7 @@ fun ScanScreen(
 
         if (!permissionState.allPermissionsGranted) {
             Button(onClick = { permissionState.launchMultiplePermissionRequest() }) {
-                Text("Bluetooth-Berechtigung gewähren")
+                Text("Bluetooth-Berechtigung gewÃ¤hren")
             }
         } else {
             if (connectionState is ConnectionState.Ready) {
@@ -107,7 +107,7 @@ fun ScanScreen(
 
             if (savedDevices.isNotEmpty()) {
                 Text(
-                    "Gemerkte Geräte",
+                    "Gemerkte GerÃ¤te",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp)
@@ -123,7 +123,7 @@ fun ScanScreen(
             }
 
             Text(
-                "Verfügbare Sensoren:",
+                "VerfÃ¼gbare Sensoren:",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp)
@@ -133,7 +133,7 @@ fun ScanScreen(
                 enabled = !isScanning,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (isScanning) "Suche läuft…" else "Suche starten")
+                Text(if (isScanning) "Suche lÃ¤uftâ€¦" else "Suche starten")
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 items(discoveredDevices, key = { it.address }) { device ->

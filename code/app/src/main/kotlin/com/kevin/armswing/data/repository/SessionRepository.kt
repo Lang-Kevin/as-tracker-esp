@@ -1,4 +1,4 @@
-package com.kevin.armswing.data.repository
+﻿package com.kevin.armswing.data.repository
 
 import android.util.Log
 import com.kevin.armswing.ble.BleManager
@@ -7,10 +7,12 @@ import com.kevin.armswing.data.entity.Session
 import com.kevin.armswing.data.entity.VelocitySample
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class SessionRepository @Inject constructor(
     private val db: ArmSwingDatabase,
@@ -56,7 +58,7 @@ class SessionRepository @Inject constructor(
                 peakMps = max(peakMps, v)
                 runningSum += v
                 sampleCount++
-                Log.d("ArmSwing", "DB: velocity=$v m/s → session $id")
+                Log.d("ArmSwing", "DB: velocity=$v m/s â†’ session $id")
             }
         }
         Log.d("ArmSwing", "Session $id started: $label")
@@ -77,8 +79,11 @@ class SessionRepository @Inject constructor(
                 sampleCount = sampleCount
             )
         }
-        Log.d("ArmSwing", "Session $id stopped — peak=$peakMps avg=${runningSum/sampleCount.coerceAtLeast(1)} n=$sampleCount")
+        Log.d("ArmSwing", "Session $id stopped â€” peak=$peakMps avg=${runningSum/sampleCount.coerceAtLeast(1)} n=$sampleCount")
     }
+
+    fun getSamplesForSession(sessionId: Long) =
+        db.velocitySampleDao().getSamplesForSession(sessionId)
 
     fun getSessionsFlow() = db.sessionDao().getAllSessions()
 

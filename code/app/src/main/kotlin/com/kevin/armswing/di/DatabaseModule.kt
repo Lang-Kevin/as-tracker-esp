@@ -1,4 +1,4 @@
-package com.kevin.armswing.di
+﻿package com.kevin.armswing.di
 
 import android.content.Context
 import androidx.room.Room
@@ -19,7 +19,7 @@ object DatabaseModule {
     fun provideDatabase(@ApplicationContext context: Context): ArmSwingDatabase =
         Room.databaseBuilder(context, ArmSwingDatabase::class.java, "arm_swing.db")
             .addMigrations(ArmSwingDatabase.MIGRATION_2_3)
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     @Provides

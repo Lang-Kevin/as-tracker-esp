@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.history
+﻿package com.kevin.armswing.ui.history
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.armswing.data.entity.Session
 import com.kevin.armswing.data.entity.WeekStat
@@ -39,7 +39,7 @@ fun HistoryScreen(
     val weeklyStats by viewModel.weeklyStats.collectAsStateWithLifecycle()
     val trash by viewModel.trash.collectAsStateWithLifecycle()
     var pendingDeleteIds by remember { mutableStateOf<List<Long>?>(null) }
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     SoftDeleteConfirmationDialog(
         pendingIds = pendingDeleteIds,
@@ -63,7 +63,7 @@ fun HistoryScreen(
                     Icon(Icons.Default.Close, contentDescription = "Auswahl abbrechen")
                 }
                 Text(
-                    "${selectedIds.size} ausgewählt",
+                    "${selectedIds.size} ausgewÃ¤hlt",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -71,7 +71,7 @@ fun HistoryScreen(
                     onClick = { pendingDeleteIds = selectedIds.toList() },
                     enabled = selectedIds.isNotEmpty()
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Löschen")
+                    Icon(Icons.Default.Delete, contentDescription = "LÃ¶schen")
                 }
             }
         } else {
@@ -79,7 +79,7 @@ fun HistoryScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(start = 4.dp, top = 4.dp)
             ) {
-                TextButton(onClick = onBack) { Text("← Zurück") }
+                TextButton(onClick = onBack) { Text("â† ZurÃ¼ck") }
                 Text("Verlauf", style = MaterialTheme.typography.headlineMedium)
             }
             TabRow(selectedTabIndex = selectedTab) {
@@ -142,8 +142,8 @@ private fun HistoryTab(
             SummaryCard(listOf(
                 "TRAININGS" to summary.sessionCount.toString(),
                 "GESAMTDAUER" to durationString(summary.totalDurationS),
-                "Ø m/s" to "%.2f".format(summary.avgMps),
-                "LÄNGSTE" to durationString(summary.longestDurationS)
+                "Ã˜ m/s" to "%.2f".format(summary.avgMps),
+                "LÃ„NGSTE" to durationString(summary.longestDurationS)
             ))
         }
         items(sessions, key = { it.id }) { session ->
@@ -216,7 +216,7 @@ private fun StatsTab(weeklyStats: List<WeekStat>) {
                     color = Color.White.copy(alpha = 0.5f))
                 Text("MIN", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.5f))
-                Text("Ø m/s", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall,
+                Text("Ã˜ m/s", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.5f))
             }
             HorizontalDivider()

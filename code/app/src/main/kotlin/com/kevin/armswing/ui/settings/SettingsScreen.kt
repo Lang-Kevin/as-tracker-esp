@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.settings
+﻿package com.kevin.armswing.ui.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,7 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
@@ -28,7 +28,7 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("← Zurück") }
+            TextButton(onClick = onBack) { Text("â† ZurÃ¼ck") }
             Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
         }
 
@@ -37,7 +37,7 @@ fun SettingsScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Gerät", style = MaterialTheme.typography.titleMedium)
+                Text("GerÃ¤t", style = MaterialTheme.typography.titleMedium)
                 HorizontalDivider()
 
                 if (savedDeviceAddress != null) {
@@ -60,7 +60,7 @@ fun SettingsScreen(
                     }
                 } else {
                     Text(
-                        "Kein Gerät gespeichert",
+                        "Kein GerÃ¤t gespeichert",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -88,7 +88,7 @@ fun SettingsScreen(
                 Text("Spielerprofil", style = MaterialTheme.typography.titleMedium)
                 HorizontalDivider()
                 Text(
-                    "Körpermaße für die Geschwindigkeitsberechnung. Der Sensor sitzt mittig auf dem Oberarm.",
+                    "KÃ¶rpermaÃŸe fÃ¼r die Geschwindigkeitsberechnung. Der Sensor sitzt mittig auf dem Oberarm.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -108,7 +108,7 @@ fun SettingsScreen(
             ) {
                 Text("Sensor-Info", style = MaterialTheme.typography.titleMedium)
                 HorizontalDivider()
-                InfoRow("Gerätename", "MPU6050_Sensor")
+                InfoRow("GerÃ¤tename", "MPU6050_Sensor")
                 InfoRow("Service UUID", "12345678-1234-1234-1234-1234567890ab")
                 InfoRow("Char UUID", "87654321-4321-4321-4321-0987654321ba")
             }
