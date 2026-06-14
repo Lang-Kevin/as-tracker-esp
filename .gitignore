@@ -1,6 +1,7 @@
 # Claude Code internals
 .claude/
 .claudeignore
+CLAUDE.md
 
 # IDE
 .idea/
@@ -14,3 +15,6 @@ code/**/build/
 
 # Local config
 local.properties
+
+# Build logs
+build_out.txt
