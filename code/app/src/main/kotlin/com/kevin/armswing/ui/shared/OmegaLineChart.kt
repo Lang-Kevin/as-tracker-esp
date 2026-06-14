@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.shared
+﻿package com.kevin.armswing.ui.shared
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -7,8 +7,8 @@ import androidx.compose.ui.Modifier
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 
 @Composable
 fun OmegaLineChart(
@@ -20,7 +20,7 @@ fun OmegaLineChart(
     LaunchedEffect(velocityHistory) {
         if (velocityHistory.isNotEmpty()) {
             modelProducer.runTransaction {
-                lineSeries { series(velocityHistory) }
+                lineModel { series(velocityHistory) }
             }
         }
     }
