@@ -1,5 +1,6 @@
 package com.kevin.armswing.ui.history
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -18,8 +20,11 @@ import com.kevin.armswing.data.entity.Session
 import com.kevin.armswing.data.entity.WeekStat
 import com.kevin.shared.ui.session.SessionListItem
 import com.kevin.shared.ui.session.SummaryCard
+import com.kevin.shared.ui.session.TrashSessionItem
+import com.kevin.shared.ui.session.TrashTab
 import com.kevin.shared.ui.session.durationString
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     onBack: () -> Unit,
@@ -31,22 +36,30 @@ fun HistoryScreen(
     val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
     val summary by viewModel.summary.collectAsStateWithLifecycle()
     val weeklyStats by viewModel.weeklyStats.collectAsStateWithLifecycle()
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    val trash by viewModel.trash.collectAsStateWithLifecycle()
+    var pendingDeleteIds by remember { mutableStateOf<List<Long>?>(null) }
     var selectedTab by remember { mutableStateOf(0) }
 
-    if (showDeleteDialog) {
+    pendingDeleteIds?.let { ids ->
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Aufträge löschen?") },
-            text = { Text("${selectedIds.size} Eintrag(Einträge) werden unwiderruflich gelöscht.") },
+            onDismissRequest = { pendingDeleteIds = null },
+            title = { Text("In Papierkorb verschieben?") },
+            text = {
+                val count = ids.size
+                Text(
+                    "$count ${if (count == 1) "Eintrag wird" else "Einträge werden"} in den Papierkorb " +
+                        "verschoben und beim nächsten App-Start endgültig gelöscht."
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    showDeleteDialog = false
-                    viewModel.deleteSelected()
-                }) { Text("Löschen") }
+                    ids.forEach { viewModel.softDelete(it) }
+                    viewModel.clearSelection()
+                    pendingDeleteIds = null
+                }) { Text("Verschieben") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Abbrechen") }
+                TextButton(onClick = { pendingDeleteIds = null }) { Text("Abbrechen") }
             }
         )
     }
@@ -68,7 +81,7 @@ fun HistoryScreen(
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(
-                    onClick = { showDeleteDialog = true },
+                    onClick = { pendingDeleteIds = selectedIds.toList() },
                     enabled = selectedIds.isNotEmpty()
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = "Löschen")
@@ -83,16 +96,9 @@ fun HistoryScreen(
                 Text("Verlauf", style = MaterialTheme.typography.headlineMedium)
             }
             TabRow(selectedTabIndex = selectedTab) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("Verlauf") }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text("Statistik") }
-                )
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Verlauf") })
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Statistik") })
+                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Papierkorb") })
             }
         }
 
@@ -104,13 +110,19 @@ fun HistoryScreen(
                 summary = summary,
                 onSessionClick = onSessionClick,
                 onToggle = { viewModel.toggleSelection(it) },
-                onLongClick = { viewModel.startSelection(it) }
+                onLongClick = { viewModel.startSelection(it) },
+                onSwipeDelete = { pendingDeleteIds = listOf(it) }
             )
             1 -> StatsTab(weeklyStats = weeklyStats)
+            2 -> TrashTab(
+                items = trash.map { TrashSessionItem(it.id, it.label, it.startedAt) },
+                onRestore = { viewModel.restore(it) }
+            )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryTab(
     sessions: List<Session>,
@@ -119,7 +131,8 @@ private fun HistoryTab(
     summary: SummaryStats,
     onSessionClick: (Long) -> Unit,
     onToggle: (Long) -> Unit,
-    onLongClick: (Long) -> Unit
+    onLongClick: (Long) -> Unit,
+    onSwipeDelete: (Long) -> Unit
 ) {
     if (sessions.isEmpty()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -145,18 +158,48 @@ private fun HistoryTab(
             ))
         }
         items(sessions, key = { it.id }) { session ->
-            SessionListItem(
-                label = session.label,
-                startedAt = session.startedAt,
-                endedAt = session.endedAt,
-                isSelected = session.id in selectedIds,
-                isSelectionMode = isSelectionMode,
-                onClick = {
-                    if (isSelectionMode) onToggle(session.id)
-                    else onSessionClick(session.id)
-                },
-                onLongClick = { onLongClick(session.id) }
+            val dismissState = rememberSwipeToDismissBoxState(
+                confirmValueChange = { value ->
+                    if (!isSelectionMode && value == SwipeToDismissBoxValue.EndToStart) {
+                        onSwipeDelete(session.id)
+                        false
+                    } else false
+                }
             )
+            SwipeToDismissBox(
+                state = dismissState,
+                backgroundContent = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CardDefaults.shape)
+                            .background(MaterialTheme.colorScheme.error)
+                            .padding(end = 16.dp),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+                    }
+                },
+                enableDismissFromStartToEnd = false,
+                enableDismissFromEndToStart = !isSelectionMode
+            ) {
+                SessionListItem(
+                    label = session.label,
+                    startedAt = session.startedAt,
+                    endedAt = session.endedAt,
+                    isSelected = session.id in selectedIds,
+                    isSelectionMode = isSelectionMode,
+                    onClick = {
+                        if (isSelectionMode) onToggle(session.id)
+                        else onSessionClick(session.id)
+                    },
+                    onLongClick = { onLongClick(session.id) }
+                )
+            }
         }
     }
 }
@@ -205,4 +248,3 @@ private fun StatsTab(weeklyStats: List<WeekStat>) {
         }
     }
 }
-
