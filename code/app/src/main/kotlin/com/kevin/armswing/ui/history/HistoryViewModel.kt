@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.history
+﻿package com.kevin.armswing.ui.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

@@ -1,4 +1,4 @@
-package com.kevin.armswing.data.repository
+﻿package com.kevin.armswing.data.repository
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -36,17 +36,16 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it.remove(Keys.SAVED_DEVICE_MAC) }
     }
 
-    val savedDevices: Flow<List<SavedDevice>> = dataStore.data.map { prefs ->
-        prefs[Keys.SAVED_DEVICES]?.let { json ->
-            runCatching { Json.decodeFromString<List<SavedDevice>>(json) }.getOrDefault(emptyList())
+    private fun Preferences.decodeDevices(): List<SavedDevice> =
+        get(Keys.SAVED_DEVICES)?.let {
+            runCatching { Json.decodeFromString<List<SavedDevice>>(it) }.getOrDefault(emptyList())
         } ?: emptyList()
-    }
+
+    val savedDevices: Flow<List<SavedDevice>> = dataStore.data.map { it.decodeDevices() }
 
     suspend fun addSavedDevice(device: SavedDevice) {
         dataStore.edit { prefs ->
-            val current = prefs[Keys.SAVED_DEVICES]?.let {
-                runCatching { Json.decodeFromString<List<SavedDevice>>(it) }.getOrDefault(emptyList())
-            } ?: emptyList()
+            val current = prefs.decodeDevices()
             prefs[Keys.SAVED_DEVICES] = Json.encodeToString(
                 listOf(device) + current.filter { it.address != device.address }
             )
@@ -55,10 +54,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun removeSavedDevice(address: String) {
         dataStore.edit { prefs ->
-            val current = prefs[Keys.SAVED_DEVICES]?.let {
-                runCatching { Json.decodeFromString<List<SavedDevice>>(it) }.getOrDefault(emptyList())
-            } ?: emptyList()
-            prefs[Keys.SAVED_DEVICES] = Json.encodeToString(current.filter { it.address != address })
+            prefs[Keys.SAVED_DEVICES] = Json.encodeToString(
+                prefs.decodeDevices().filter { it.address != address }
+            )
         }
     }
 
@@ -80,7 +78,7 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[Keys.SHOULDER_TO_ELBOW] = cm }
     }
 
-    // sensorRadius in meters: spine→shoulder + shoulder→elbow/2, converted from cm
+    // sensorRadius in meters: spineâ†’shoulder + shoulderâ†’elbow/2, converted from cm
     val sensorRadius: Flow<Float> = dataStore.data.map { prefs ->
         val spine = prefs[Keys.SPINE_TO_SHOULDER] ?: 20f
         val elbow = prefs[Keys.SHOULDER_TO_ELBOW] ?: 30f

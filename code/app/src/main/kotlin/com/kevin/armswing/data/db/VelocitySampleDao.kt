@@ -1,4 +1,4 @@
-package com.kevin.armswing.data.db
+﻿package com.kevin.armswing.data.db
 
 import androidx.room.*
 import com.kevin.armswing.data.entity.VelocitySample

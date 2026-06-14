@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.live
+﻿package com.kevin.armswing.ui.live
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,14 +14,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.kevin.armswing.ui.shared.OmegaSessionChart
 import com.kevin.armswing.ui.shared.StatItem
 import com.kevin.armswing.ui.theme.BackgroundDark
+import com.kevin.armswing.ui.theme.LightPurple
 import com.kevin.armswing.ui.theme.OnPrimary
 import com.kevin.armswing.ui.theme.PrimaryPurple
 import com.kevin.armswing.ui.theme.TertiaryPink
+import com.kevin.shared.ui.chart.ChartScaleMode
+import com.kevin.shared.ui.chart.VelocityChart
 
 @Composable
 fun LiveScreen(
@@ -38,6 +40,8 @@ fun LiveScreen(
     val sampleCount by viewModel.sampleCount.collectAsStateWithLifecycle()
     val sessionLabel by viewModel.sessionLabel.collectAsStateWithLifecycle()
     val batteryLevel by viewModel.batteryLevel.collectAsStateWithLifecycle()
+    val chartMode by viewModel.chartMode.collectAsStateWithLifecycle()
+    val fullHistory by viewModel.fullHistory.collectAsStateWithLifecycle()
 
     var showAbortDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
@@ -54,7 +58,7 @@ fun LiveScreen(
 
     if (showStopDialog) {
         ConfirmDialog(
-            title = "Aufzeichnung abschließen?",
+            title = "Aufzeichnung abschlieÃŸen?",
             text = "Die Aufzeichnung wird beendet und die Daten werden gespeichert.",
             confirmLabel = "Speichern",
             onConfirm = { showStopDialog = false; onStopSession() },
@@ -101,9 +105,34 @@ fun LiveScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        OmegaSessionChart(
-            velocityHistory = velocityHistory,
-            currentVelocityMs = currentVelocityMs,
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            ChartScaleMode.entries.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = chartMode == mode,
+                    onClick = { viewModel.setChartMode(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index, ChartScaleMode.entries.size),
+                    label = {
+                        Text(
+                            when (mode) {
+                                ChartScaleMode.SCROLL -> "Scroll"
+                                ChartScaleMode.SHOW_ALL -> "Alles"
+                                ChartScaleMode.AUTO_FIT -> "Auto"
+                            }
+                        )
+                    }
+                )
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        VelocityChart(
+            values = velocityHistory,
+            currentValue = currentVelocityMs,
+            mode = chartMode,
+            fullHistory = fullHistory,
+            lineColor = LightPurple,
+            markerColor = Color.White,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -125,18 +154,18 @@ fun LiveScreen(
         Row(modifier = Modifier.fillMaxWidth()) {
             StatItem(
                 "AKTUELL",
-                currentVelocityMs?.let { "%.2f m/s".format(it) } ?: "—",
+                currentVelocityMs?.let { "%.2f m/s".format(it) } ?: "â€”",
                 Modifier.weight(1f)
             )
             StatItem(
                 "PEAK",
-                sessionPeakMs?.let { "%.2f m/s".format(it) } ?: "—",
+                sessionPeakMs?.let { "%.2f m/s".format(it) } ?: "â€”",
                 Modifier.weight(1f),
                 valueColor = PrimaryPurple
             )
             StatItem(
-                "Ø",
-                avgVelocityMs?.let { "%.2f m/s".format(it) } ?: "—",
+                "Ã˜",
+                avgVelocityMs?.let { "%.2f m/s".format(it) } ?: "â€”",
                 Modifier.weight(1f)
             )
         }
@@ -171,7 +200,7 @@ fun LiveScreen(
                     containerColor = PrimaryPurple,
                     contentColor = OnPrimary
                 )
-            ) { Text("Abschließen") }
+            ) { Text("AbschlieÃŸen") }
         }
     }
 }

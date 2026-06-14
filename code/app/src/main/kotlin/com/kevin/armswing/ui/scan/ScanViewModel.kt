@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.scan
+﻿package com.kevin.armswing.ui.scan
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
@@ -81,7 +81,7 @@ class ScanViewModel @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
-        pendingDeviceInfo = device.address to (device.name ?: "Unbekanntes Gerät")
+        pendingDeviceInfo = device.address to (device.name ?: "Unbekanntes GerÃ¤t")
         bleManager.stopScan()
         bleManager.connect(device)
     }

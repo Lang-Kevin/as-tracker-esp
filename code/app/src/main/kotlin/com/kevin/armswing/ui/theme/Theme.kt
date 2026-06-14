@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.theme
+﻿package com.kevin.armswing.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme

@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.profile
+﻿package com.kevin.armswing.ui.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

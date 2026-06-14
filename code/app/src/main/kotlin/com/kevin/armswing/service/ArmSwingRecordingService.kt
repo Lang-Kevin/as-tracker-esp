@@ -1,4 +1,4 @@
-package com.kevin.armswing.service
+﻿package com.kevin.armswing.service
 
 import android.app.Notification
 import android.app.PendingIntent
@@ -36,8 +36,8 @@ class ArmSwingRecordingService : BaseRecordingService() {
         )
         return NotificationCompat.Builder(this, notificationChannelId)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle("Arm Swing läuft")
-            .setContentText("$label • $elapsed")
+            .setContentTitle("Arm Swing lÃ¤uft")
+            .setContentText("$label â€¢ $elapsed")
             .setContentIntent(tapIntent)
             .setOngoing(true)
             .build()

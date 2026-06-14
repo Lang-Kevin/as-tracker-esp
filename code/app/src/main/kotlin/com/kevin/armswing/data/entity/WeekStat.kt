@@ -1,4 +1,4 @@
-package com.kevin.armswing.data.entity
+﻿package com.kevin.armswing.data.entity
 
 data class WeekStat(
     val week: String,

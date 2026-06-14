@@ -1,4 +1,4 @@
-package com.kevin.armswing.ble
+﻿package com.kevin.armswing.ble
 
 import android.annotation.SuppressLint
 import android.bluetooth.*
@@ -54,7 +54,7 @@ class BleManager @Inject constructor(
 
     init {
         // Push sensorRadius changes to device immediately when already connected.
-        // drop(1) skips the initial emission — the connect handshake already sends it.
+        // drop(1) skips the initial emission â€” the connect handshake already sends it.
         scope.launch {
             settingsRepository.sensorRadius.drop(1).collect { radius ->
                 val gatt = bluetoothGatt ?: return@collect
@@ -91,7 +91,7 @@ class BleManager @Inject constructor(
         _scanResults.value = emptyList()
         val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
         val scanner = adapter.bluetoothLeScanner ?: run {
-            Log.e(TAG, "BLE scanner not available — Bluetooth off?")
+            Log.e(TAG, "BLE scanner not available â€” Bluetooth off?")
             return
         }
         val settings = ScanSettings.Builder()
@@ -222,7 +222,7 @@ class BleManager @Inject constructor(
                 }
             }
             if (_connectionState.value !is ConnectionState.Ready) {
-                Log.w(TAG, "Reconnect failed after all attempts — giving up")
+                Log.w(TAG, "Reconnect failed after all attempts â€” giving up")
                 _connectionState.value = ConnectionState.Disconnected
             }
         }
@@ -234,7 +234,7 @@ class BleManager @Inject constructor(
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
-                    Log.d(TAG, "GATT connected — discovering services")
+                    Log.d(TAG, "GATT connected â€” discovering services")
                     _connectionState.value = ConnectionState.Connected
                     gatt.discoverServices()
                 }
@@ -243,7 +243,7 @@ class BleManager @Inject constructor(
                     gatt.close()
                     bluetoothGatt = null
                     if (reconnectEnabled) {
-                        Log.d(TAG, "Unexpected disconnect — scheduling reconnect")
+                        Log.d(TAG, "Unexpected disconnect â€” scheduling reconnect")
                         scheduleReconnect()
                     } else {
                         _connectionState.value = ConnectionState.Disconnected
@@ -271,15 +271,8 @@ class BleManager @Inject constructor(
                 Log.e(TAG, "CCCD descriptor (0x2902) not found")
                 return
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
-            } else {
-                @Suppress("DEPRECATION")
-                cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                @Suppress("DEPRECATION")
-                gatt.writeDescriptor(cccd)
-            }
-            Log.d(TAG, "CCCD written — MPU notifications enabled")
+            writeDescriptor(gatt, cccd)
+            Log.d(TAG, "CCCD written â€” MPU notifications enabled")
         }
 
         override fun onDescriptorWrite(
@@ -306,7 +299,7 @@ class BleManager @Inject constructor(
         ) {
             when (characteristic.uuid) {
                 CONFIG_CHAR_UUID -> if (status == BluetoothGatt.GATT_SUCCESS) {
-                    Log.d(TAG, "SensorRadius write confirmed — enabling battery notifications")
+                    Log.d(TAG, "SensorRadius write confirmed â€” enabling battery notifications")
                     enableBatteryNotifications(gatt)
                 } else {
                     Log.e(TAG, "SensorRadius write FAILED: status=$status")
@@ -320,13 +313,7 @@ class BleManager @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray,
             status: Int
-        ) {
-            if (characteristic.uuid == BATTERY_CHAR_UUID && status == BluetoothGatt.GATT_SUCCESS) {
-                val level = value.firstOrNull()?.toInt()?.and(0xFF)
-                _batteryLevel.value = level
-                Log.d(TAG, "Battery read: $level%")
-            }
-        }
+        ) = handleBatteryRead(characteristic.uuid, value, status)
 
         // API < 33
         @Suppress("DEPRECATION")
@@ -335,13 +322,8 @@ class BleManager @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             status: Int
         ) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
-                && characteristic.uuid == BATTERY_CHAR_UUID
-                && status == BluetoothGatt.GATT_SUCCESS
-            ) {
-                val level = characteristic.value?.firstOrNull()?.toInt()?.and(0xFF)
-                _batteryLevel.value = level
-                Log.d(TAG, "Battery read: $level%")
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                handleBatteryRead(characteristic.uuid, characteristic.value ?: byteArrayOf(), status)
             }
         }
 
@@ -350,20 +332,7 @@ class BleManager @Inject constructor(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
-        ) {
-            if (gatt.device.address != lastDevice?.address) {
-                Log.w(TAG, "Dropped notification from unexpected device: ${gatt.device.address}")
-                return
-            }
-            when (characteristic.uuid) {
-                MPU_CHAR_UUID -> handleVelocityData(value)
-                BATTERY_CHAR_UUID -> {
-                    val level = value.firstOrNull()?.toInt()?.and(0xFF)
-                    _batteryLevel.value = level
-                    Log.d(TAG, "Battery notify: $level%")
-                }
-            }
-        }
+        ) = handleCharacteristicChanged(gatt, characteristic, value)
 
         // API < 33
         @Suppress("DEPRECATION")
@@ -371,18 +340,8 @@ class BleManager @Inject constructor(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic
         ) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
-            if (gatt.device.address != lastDevice?.address) {
-                Log.w(TAG, "Dropped notification from unexpected device: ${gatt.device.address}")
-                return
-            }
-            when (characteristic.uuid) {
-                MPU_CHAR_UUID -> handleVelocityData(characteristic.value ?: return)
-                BATTERY_CHAR_UUID -> {
-                    val level = characteristic.value?.firstOrNull()?.toInt()?.and(0xFF)
-                    _batteryLevel.value = level
-                    Log.d(TAG, "Battery notify: $level%")
-                }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                handleCharacteristicChanged(gatt, characteristic, characteristic.value ?: return)
             }
         }
     }
@@ -401,16 +360,22 @@ class BleManager @Inject constructor(
             @Suppress("DEPRECATION")
             gatt.writeCharacteristic(char)
         }
-        Log.d(TAG, "SensorRadius $radius m → device")
+        Log.d(TAG, "SensorRadius $radius m â†’ device")
     }
 
     @SuppressLint("MissingPermission")
     private fun enableBatteryNotifications(gatt: BluetoothGatt) {
         val battChar = gatt.getService(BATTERY_SERVICE_UUID)
             ?.getCharacteristic(BATTERY_CHAR_UUID)
-            ?: run { Log.d(TAG, "Battery service not present — skipping"); return }
+            ?: run { Log.d(TAG, "Battery service not present â€” skipping"); return }
         gatt.setCharacteristicNotification(battChar, true)
         val cccd = battChar.getDescriptor(BleConstants.CCCD_UUID) ?: return
+        writeDescriptor(gatt, cccd)
+        Log.d(TAG, "Battery CCCD write initiated")
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun writeDescriptor(gatt: BluetoothGatt, cccd: BluetoothGattDescriptor) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
         } else {
@@ -419,7 +384,32 @@ class BleManager @Inject constructor(
             @Suppress("DEPRECATION")
             gatt.writeDescriptor(cccd)
         }
-        Log.d(TAG, "Battery CCCD write initiated")
+    }
+
+    private fun handleBatteryRead(uuid: UUID, value: ByteArray, status: Int) {
+        if (uuid == BATTERY_CHAR_UUID && status == BluetoothGatt.GATT_SUCCESS) {
+            _batteryLevel.value = value.firstOrNull()?.toInt()?.and(0xFF)
+            Log.d(TAG, "Battery read: ${_batteryLevel.value}%")
+        }
+    }
+
+    private fun handleCharacteristicChanged(
+        gatt: BluetoothGatt,
+        characteristic: BluetoothGattCharacteristic,
+        value: ByteArray
+    ) {
+        if (gatt.device.address != lastDevice?.address) {
+            Log.w(TAG, "Dropped notification from unexpected device: ${gatt.device.address}")
+            return
+        }
+        when (characteristic.uuid) {
+            MPU_CHAR_UUID -> handleVelocityData(value)
+            BATTERY_CHAR_UUID -> {
+                val level = value.firstOrNull()?.toInt()?.and(0xFF)
+                _batteryLevel.value = level
+                Log.d(TAG, "Battery notify: $level%")
+            }
+        }
     }
 
     private fun handleVelocityData(value: ByteArray) {

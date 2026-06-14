@@ -1,4 +1,4 @@
-package com.kevin.armswing.ui.detail
+﻿package com.kevin.armswing.ui.detail
 
 import android.content.Context
 import android.content.Intent
