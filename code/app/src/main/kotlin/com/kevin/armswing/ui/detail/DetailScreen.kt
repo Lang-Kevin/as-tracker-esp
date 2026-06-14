@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -22,7 +23,6 @@ import com.kevin.armswing.ui.theme.PrimaryPurple
 import com.kevin.shared.ui.session.durationString
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 private val TRAINING_TYPES = listOf(
     "Training",
@@ -89,7 +89,7 @@ fun DetailScreen(
             session?.let { s ->
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        SimpleDateFormat("dd.MM.yy", Locale.getDefault()).format(Date(s.startedAt)),
+                        SimpleDateFormat("dd.MM.yy", LocalConfiguration.current.locales[0]).format(Date(s.startedAt)),
                         color = Color.White,
                         style = MaterialTheme.typography.bodySmall
                     )
