@@ -21,6 +21,7 @@ import com.kevin.armswing.data.entity.WeekStat
 import com.kevin.shared.ui.session.SessionListItem
 import com.kevin.shared.ui.session.SummaryCard
 import com.kevin.shared.ui.session.TrashSessionItem
+import com.kevin.shared.ui.session.SoftDeleteConfirmationDialog
 import com.kevin.shared.ui.session.TrashTab
 import com.kevin.shared.ui.session.durationString
 
@@ -40,29 +41,15 @@ fun HistoryScreen(
     var pendingDeleteIds by remember { mutableStateOf<List<Long>?>(null) }
     var selectedTab by remember { mutableStateOf(0) }
 
-    pendingDeleteIds?.let { ids ->
-        AlertDialog(
-            onDismissRequest = { pendingDeleteIds = null },
-            title = { Text("In Papierkorb verschieben?") },
-            text = {
-                val count = ids.size
-                Text(
-                    "$count ${if (count == 1) "Eintrag wird" else "Einträge werden"} in den Papierkorb " +
-                        "verschoben und beim nächsten App-Start endgültig gelöscht."
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    ids.forEach { viewModel.softDelete(it) }
-                    viewModel.clearSelection()
-                    pendingDeleteIds = null
-                }) { Text("Verschieben") }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDeleteIds = null }) { Text("Abbrechen") }
-            }
-        )
-    }
+    SoftDeleteConfirmationDialog(
+        pendingIds = pendingDeleteIds,
+        onConfirm = { ids ->
+            ids.forEach { viewModel.softDelete(it) }
+            viewModel.clearSelection()
+            pendingDeleteIds = null
+        },
+        onDismiss = { pendingDeleteIds = null }
+    )
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (isSelectionMode) {
@@ -114,10 +101,12 @@ fun HistoryScreen(
                 onSwipeDelete = { pendingDeleteIds = listOf(it) }
             )
             1 -> StatsTab(weeklyStats = weeklyStats)
-            2 -> TrashTab(
-                items = trash.map { TrashSessionItem(it.id, it.label, it.startedAt) },
-                onRestore = { viewModel.restore(it) }
-            )
+            2 -> {
+                val trashItems = remember(trash) {
+                    trash.map { TrashSessionItem(it.id, it.label, it.startedAt) }
+                }
+                TrashTab(items = trashItems, onRestore = { viewModel.restore(it) })
+            }
         }
     }
 }
