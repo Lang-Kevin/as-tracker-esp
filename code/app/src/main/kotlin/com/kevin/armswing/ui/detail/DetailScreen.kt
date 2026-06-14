@@ -19,7 +19,7 @@ import com.kevin.armswing.ui.shared.StatItem
 import com.kevin.armswing.ui.theme.BackgroundDark
 import com.kevin.armswing.ui.theme.OnPrimary
 import com.kevin.armswing.ui.theme.PrimaryPurple
-import com.kevin.armswing.ui.history.durationString
+import com.kevin.shared.ui.session.durationString
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

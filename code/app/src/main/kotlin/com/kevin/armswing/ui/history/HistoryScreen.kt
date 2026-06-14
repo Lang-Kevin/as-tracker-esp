@@ -1,7 +1,5 @@
 package com.kevin.armswing.ui.history
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,10 +16,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.armswing.data.entity.Session
 import com.kevin.armswing.data.entity.WeekStat
-import com.kevin.armswing.ui.theme.PrimaryPurple
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.kevin.shared.ui.session.SessionListItem
+import com.kevin.shared.ui.session.SummaryCard
+import com.kevin.shared.ui.session.durationString
 
 @Composable
 fun HistoryScreen(
@@ -140,11 +137,18 @@ private fun HistoryTab(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         item {
-            SummaryCard(summary)
+            SummaryCard(listOf(
+                "TRAININGS" to summary.sessionCount.toString(),
+                "GESAMTDAUER" to durationString(summary.totalDurationS),
+                "Ø m/s" to "%.2f".format(summary.avgMps),
+                "LÄNGSTE" to durationString(summary.longestDurationS)
+            ))
         }
         items(sessions, key = { it.id }) { session ->
             SessionListItem(
-                session = session,
+                label = session.label,
+                startedAt = session.startedAt,
+                endedAt = session.endedAt,
                 isSelected = session.id in selectedIds,
                 isSelectionMode = isSelectionMode,
                 onClick = {
@@ -154,37 +158,6 @@ private fun HistoryTab(
                 onLongClick = { onLongClick(session.id) }
             )
         }
-    }
-}
-
-@Composable
-private fun SummaryCard(summary: SummaryStats) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                "Übersicht",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                SummaryItem("TRAININGS", summary.sessionCount.toString(), Modifier.weight(1f))
-                SummaryItem("GESAMTDAUER", durationString(summary.totalDurationS), Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(4.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                SummaryItem("Ø m/s", "%.2f".format(summary.avgMps), Modifier.weight(1f))
-                SummaryItem("LÄNGSTE", durationString(summary.longestDurationS), Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-        Text(value, style = MaterialTheme.typography.titleMedium, color = PrimaryPurple)
     }
 }
 
@@ -233,61 +206,3 @@ private fun StatsTab(weeklyStats: List<WeekStat>) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun SessionListItem(
-    session: Session,
-    isSelected: Boolean,
-    isSelectionMode: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
-    val containerColor = if (isSelected)
-        MaterialTheme.colorScheme.primaryContainer
-    else
-        MaterialTheme.colorScheme.surface
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (isSelectionMode) {
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = { onClick() },
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(session.label, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    session.startedAt.toDateString(),
-                    style = MaterialTheme.typography.bodySmall
-                )
-                session.endedAt?.let { end ->
-                    Text(
-                        "Dauer: ${durationString((end - session.startedAt) / 1000)}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                } ?: Text("läuft noch…", style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-}
-
-private fun Long.toDateString(): String =
-    SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(this))
-
-internal fun durationString(seconds: Long): String {
-    val h = seconds / 3600
-    val m = (seconds % 3600) / 60
-    val s = seconds % 60
-    return if (h > 0) "%02d:%02d:%02d".format(h, m, s)
-    else "%02d:%02d".format(m, s)
-}
