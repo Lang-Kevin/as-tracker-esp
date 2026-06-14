@@ -2,7 +2,6 @@ package com.kevin.armswing.ui.scan
 
 import android.Manifest
 import android.os.Build
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,15 +9,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.kevin.shared.ble.ConnectionState
-import com.kevin.shared.ble.ConnectionState.Reconnecting
-import com.kevin.shared.domain.DiscoveredDevice
-import com.kevin.shared.domain.SavedDevice
+import com.kevin.armswing.ui.theme.LightPurple
+import com.kevin.shared.ui.scan.BleStatusCard
+import com.kevin.shared.ui.scan.DiscoveredDeviceItem
+import com.kevin.shared.ui.scan.SavedDeviceItem
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -33,6 +34,7 @@ fun ScanScreen(
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
     val savedDevices by viewModel.savedDevices.collectAsStateWithLifecycle()
     val autoConnect by viewModel.autoConnect.collectAsStateWithLifecycle()
+    val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
 
     val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
@@ -56,36 +58,26 @@ fun ScanScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Arm Swing Tracker", style = MaterialTheme.typography.headlineMedium)
-            TextButton(onClick = onNavigateToHistory) { Text("Verlauf") }
-            TextButton(onClick = onNavigateToSettings) { Text("⚙") }
+            Text(
+                "Arm Swing Tracker",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = LightPurple
+            )
+            TextButton(onClick = onNavigateToHistory) {
+                Text("Verlauf", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = onNavigateToSettings) {
+                Text("⚙", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
 
-        val statusText = when (connectionState) {
-            is Reconnecting -> "Verbindung verloren — reconnecting…"
-            else -> connectionState::class.simpleName ?: ""
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Text("Status: $statusText", style = MaterialTheme.typography.bodyMedium)
-                if (connectionState !is ConnectionState.Disconnected) {
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = { viewModel.disconnect() }) { Text("Trennen") }
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Auto-Connect", style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.width(4.dp))
-                Switch(
-                    checked = autoConnect,
-                    onCheckedChange = { viewModel.toggleAutoConnect() }
-                )
-            }
-        }
+        BleStatusCard(
+            connectionState = connectionState,
+            autoConnect = autoConnect,
+            onDisconnect = { viewModel.disconnect() },
+            onToggleAutoConnect = { viewModel.toggleAutoConnect() }
+        )
 
         if (!permissionState.allPermissionsGranted) {
             Button(onClick = { permissionState.launchMultiplePermissionRequest() }) {
@@ -114,7 +106,12 @@ fun ScanScreen(
             }
 
             if (savedDevices.isNotEmpty()) {
-                Text("Gemerkte Geräte", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Gemerkte Geräte",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
                 savedDevices.forEach { device ->
                     SavedDeviceItem(
                         device = device,
@@ -125,44 +122,27 @@ fun ScanScreen(
                 HorizontalDivider()
             }
 
-            Text("Verfügbare Sensoren:", style = MaterialTheme.typography.titleSmall)
-            if (discoveredDevices.none { it is DiscoveredDevice.Real }) {
-                Text("Scan läuft…", style = MaterialTheme.typography.bodySmall)
+            Text(
+                "Verfügbare Sensoren:",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            Button(
+                onClick = { viewModel.startScan() },
+                enabled = !isScanning,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (isScanning) "Suche läuft…" else "Suche starten")
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 items(discoveredDevices, key = { it.address }) { device ->
-                    DeviceItem(device = device) { viewModel.connectToDiscovered(device) }
+                    DiscoveredDeviceItem(
+                        device = device,
+                        onClick = { viewModel.connectToDiscovered(device) }
+                    )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SavedDeviceItem(device: SavedDevice, onClick: () -> Unit, onForget: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f).clickable(onClick = onClick)) {
-                Text(device.name, style = MaterialTheme.typography.bodyLarge)
-                Text(device.address, style = MaterialTheme.typography.bodySmall)
-            }
-            TextButton(onClick = onForget) { Text("Vergessen") }
-        }
-    }
-}
-
-@Composable
-private fun DeviceItem(device: DiscoveredDevice, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(device.displayName, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                if (device is DiscoveredDevice.Fake) "Simuliertes Testgerät" else device.address,
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }

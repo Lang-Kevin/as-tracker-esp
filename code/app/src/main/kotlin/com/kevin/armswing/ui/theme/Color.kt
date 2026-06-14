@@ -10,6 +10,7 @@ val BackgroundDark = Color(0xFF1D1B20)
 val SurfaceDark    = Color(0xFF252330)
 val OnPrimary      = Color(0xFF0B0912)
 val LightPurple    = Color(0xFFCBBCFF)
+val ConnectedGreen = Color(0xFF4CAF82)
 
 val ZoneColors = listOf(
     Color(0xFF5BA9E6), // Z1 blau

@@ -11,8 +11,10 @@ import com.kevin.shared.ble.ConnectionState
 import com.kevin.shared.domain.DiscoveredDevice
 import com.kevin.shared.domain.SavedDevice
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -41,6 +43,9 @@ class ScanViewModel @Inject constructor(
     val autoConnect: StateFlow<Boolean> = settingsRepository.autoConnect
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+
     private var pendingDeviceInfo: Pair<String, String>? = null
 
     init {
@@ -57,6 +62,7 @@ class ScanViewModel @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun startScan() {
+        _isScanning.value = true
         bleManager.startScan()
         viewModelScope.launch {
             if (settingsRepository.autoConnect.first() &&
@@ -68,7 +74,10 @@ class ScanViewModel @Inject constructor(
         }
     }
 
-    fun stopScan() = bleManager.stopScan()
+    fun stopScan() {
+        _isScanning.value = false
+        bleManager.stopScan()
+    }
 
     @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
@@ -78,7 +87,7 @@ class ScanViewModel @Inject constructor(
     }
 
     fun connectToDiscovered(device: DiscoveredDevice) {
-        bleManager.stopScan()
+        stopScan()
         when (device) {
             is DiscoveredDevice.Fake -> {
                 pendingDeviceInfo = device.address to device.displayName
@@ -90,7 +99,7 @@ class ScanViewModel @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun connectToSaved(device: SavedDevice) {
-        bleManager.stopScan()
+        stopScan()
         bleManager.connectToAddress(device.address)
     }
 
@@ -112,6 +121,7 @@ class ScanViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        _isScanning.value = false
         bleManager.stopScan()
     }
 }
